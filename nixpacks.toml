@@ -4,12 +4,12 @@ nixPkgs = ["nodejs_20", "python311"]
 [phases.install]
 cmds = [
   "pip install -r requirements.txt",
-  "cd templates && npm install"
+  "cd Templates && npm install"
 ]
 
 [phases.build]
 cmds = [
-  "cd templates && npm run build"
+  "cd Templates && npm run build"
 ]
 
 [start]

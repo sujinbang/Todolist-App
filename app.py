@@ -2,7 +2,7 @@ import os
 from flask import Flask, send_from_directory
 
 # static_folder를 프론트엔드 빌드 결과물 폴더인 'templates/dist'로 지정합니다.
-app = Flask(__name__, static_folder='templates/dist')
+app = Flask(__name__, static_folder='Templates/dist')
 
 @app.route('/')
 def home():
