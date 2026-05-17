@@ -1,0 +1,6 @@
+{
+  "name": "Mindful Habits & Todos",
+  "description": "A sophisticated dark-themed lifestyle and habit tracker with an integrated calendar view.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
