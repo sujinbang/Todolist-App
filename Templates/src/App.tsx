@@ -101,8 +101,12 @@ interface Category {
 }
 
 export default function App() {
-  const [profileImage, setProfileImage] = useState('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop');
-  const [nickname, setNickname] = useState('sjbang');
+  const [profileImage, setProfileImage] = useState(() => {
+    return localStorage.getItem('profileImage') || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop';
+  });
+  const [nickname, setNickname] = useState(() => {
+    return localStorage.getItem('nickname') || 'sjbang';
+  });
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [editName, setEditName] = useState(nickname);
 
@@ -125,17 +129,21 @@ export default function App() {
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  const [dailyData, setDailyData] = useState<{ [key: string]: Category[] }>({
-    '2026-05-17': [
-      {
-        id: 'self-care',
-        name: 'self care 🛀',
-        tasks: [
-          { id: 1, title: '유산균, 양배추환 먹기', completed: false },
-          { id: 2, title: '오메가3, 타우린 먹기', completed: false }
-        ]
-      }
-    ]
+  const [dailyData, setDailyData] = useState<{ [key: string]: Category[] }>(() => {
+    const saved = localStorage.getItem('dailyData');
+    if (saved) return JSON.parse(saved);
+    return {
+      '2026-05-17': [
+        {
+          id: 'self-care',
+          name: 'self care 🛀',
+          tasks: [
+            { id: 1, title: '유산균, 양배추환 먹기', completed: false },
+            { id: 2, title: '오메가3, 타우린 먹기', completed: false }
+          ]
+        }
+      ]
+    };
   });
 
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
@@ -143,7 +151,11 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'home' | 'routines' | 'profile'>('home');
 
-  const [routines, setRoutines] = useState<any[]>([]);
+  const [routines, setRoutines] = useState<any[]>(() => {
+    const saved = localStorage.getItem('routines');
+    if (saved) return JSON.parse(saved);
+    return [];
+  });
   const [newRoutine, setNewRoutine] = useState({ title: '', categoryId: '', frequency: 'daily', value: '' });
   
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
@@ -156,6 +168,22 @@ export default function App() {
 
   const currentCategories = dailyData[selectedDate] || [];
 
+  // --- Effects for Persistence ---
+  useEffect(() => {
+    localStorage.setItem('profileImage', profileImage);
+  }, [profileImage]);
+
+  useEffect(() => {
+    localStorage.setItem('nickname', nickname);
+  }, [nickname]);
+
+  useEffect(() => {
+    localStorage.setItem('dailyData', JSON.stringify(dailyData));
+  }, [dailyData]);
+
+  useEffect(() => {
+    localStorage.setItem('routines', JSON.stringify(routines));
+  }, [routines]);
   // --- Routine Logic ---
   const applyRoutinesForDate = (dateStr: string) => {
     const date = new Date(dateStr);
