@@ -1,0 +1,457 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Plus, 
+  Trash2, 
+  BookOpen, 
+  Award, 
+  Star, 
+  Book, 
+  ChevronRight, 
+  Edit3,
+  Check,
+  Search,
+  BookMarked
+} from 'lucide-react';
+import { BookLog } from '../types';
+
+interface ReadingLogProps {
+  bLogs: BookLog[];
+  onAddBook: (book: Omit<BookLog, 'id'>) => void;
+  onUpdateProgress: (id: string, currentPage: number, status: BookLog['status'], review?: string) => void;
+  onDeleteBook: (id: string) => void;
+}
+
+const jacketColors = [
+  'bg-gradient-to-br from-indigo-500 to-indigo-700',
+  'bg-gradient-to-br from-rose-500 to-rose-700',
+  'bg-gradient-to-br from-emerald-500 to-emerald-700',
+  'bg-gradient-to-br from-amber-500 to-amber-700',
+  'bg-gradient-to-br from-cyan-500 to-cyan-700',
+  'bg-gradient-to-br from-violet-500 to-violet-700',
+  'bg-gradient-to-br from-slate-600 to-slate-800'
+];
+
+export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDeleteBook }: ReadingLogProps) {
+  const [showAddForm, setShowAddForm] = React.useState(false);
+  const [selectedBook, setSelectedBook] = React.useState<BookLog | null>(null);
+
+  // Add Book inputs
+  const [title, setTitle] = React.useState('');
+  const [author, setAuthor] = React.useState('');
+  const [totalPages, setTotalPages] = React.useState(250);
+  const [currentPage, setCurrentPage] = React.useState(0);
+  const [status, setStatus] = React.useState<BookLog['status']>('reading');
+  const [review, setReview] = React.useState('');
+
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [filterType, setFilterType] = React.useState<'All' | 'reading' | 'completed' | 'wishlist'>('All');
+
+  // Editing Book inputs (for progress modal)
+  const [editCurrentPage, setEditCurrentPage] = React.useState(0);
+  const [editReview, setEditReview] = React.useState('');
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !author.trim()) return;
+
+    const randomColor = jacketColors[Math.floor(Math.random() * jacketColors.length)];
+
+    onAddBook({
+      title: title.trim(),
+      author: author.trim(),
+      totalPages: Math.max(1, totalPages),
+      currentPage: status === 'completed' ? totalPages : Math.min(currentPage, totalPages),
+      status,
+      review: review.trim() || undefined,
+      startDate: new Date().toISOString().split('T')[0],
+      color: randomColor,
+    });
+
+    // Reset fields
+    setTitle('');
+    setAuthor('');
+    setTotalPages(250);
+    setCurrentPage(0);
+    setStatus('reading');
+    setReview('');
+    setShowAddForm(false);
+  };
+
+  const handleOpenEdit = (book: BookLog) => {
+    setSelectedBook(book);
+    setEditCurrentPage(book.currentPage);
+    setEditReview(book.review || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!selectedBook) return;
+    const finalPage = Math.min(editCurrentPage, selectedBook.totalPages);
+    let finalStatus: BookLog['status'] = selectedBook.status;
+    
+    if (finalPage >= selectedBook.totalPages) {
+      finalStatus = 'completed';
+    } else if (finalPage > 0 && (selectedBook.status === 'wishlist' || selectedBook.status === 'completed')) {
+      finalStatus = 'reading';
+    } else if (finalPage === 0 && selectedBook.status === 'completed') {
+      finalStatus = 'reading';
+    }
+
+    onUpdateProgress(selectedBook.id, finalPage, finalStatus, editReview.trim());
+    setSelectedBook(null);
+  };
+
+  // Filter books list
+  const filteredBooks = bLogs.filter(book => {
+    const textMatches = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        book.author.toLowerCase().includes(searchQuery.toLowerCase());
+    const typeMatches = filterType === 'All' || book.status === filterType;
+    return textMatches && typeMatches;
+  });
+
+  return (
+    <div className="space-y-6 text-neutral-800">
+      {/* Tab Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-[14px] font-semibold text-neutral-800">독서 기록</h2>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="flex items-center gap-1.5 h-8 px-3 bg-neutral-50 hover:bg-neutral-200 text-neutral-800 rounded text-[12px] font-medium cursor-pointer transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          추가
+        </button>
+      </div>
+
+      {/* Form Overlay (Modal-like card) */}
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="rounded-md border border-neutral-100 bg-white p-5 shadow-sm overflow-hidden"
+          >
+            <h3 className="font-semibold text-neutral-800 mb-4 text-[13px]">새 도서</h3>
+            <form onSubmit={handleAddSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-5">
+              <div className="md:col-span-4 space-y-4">
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1">제목</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="데미안"
+                    className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800 placeholder:text-neutral-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1">저자</label>
+                  <input
+                    type="text"
+                    value={author}
+                    onChange={e => setAuthor(e.target.value)}
+                    placeholder="헤르만 헤세"
+                    className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800 placeholder:text-neutral-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">총 페이지</label>
+                    <input
+                      type="number"
+                      value={totalPages}
+                      onChange={e => setTotalPages(parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800"
+                      min={1}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">현재 페이지</label>
+                    <input
+                      type="number"
+                      value={currentPage}
+                      onChange={e => setCurrentPage(parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800"
+                      min={0}
+                      disabled={status === 'wishlist' || status === 'completed'}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">상태</label>
+                    <select
+                      value={status}
+                      onChange={e => setStatus(e.target.value as BookLog['status'])}
+                      className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800"
+                    >
+                      <option value="reading" className="bg-white text-neutral-800">📖 읽는 중</option>
+                      <option value="completed" className="bg-white text-neutral-800">✨ 완독</option>
+                      <option value="wishlist" className="bg-white text-neutral-800">📝 위시</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-4 flex flex-col justify-between">
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1">메모</label>
+                  <textarea
+                    value={review}
+                    onChange={e => setReview(e.target.value)}
+                    placeholder="짧은 평을 적어보세요"
+                    className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800 placeholder:text-neutral-500 min-h-[85px] resize-none"
+                  />
+                </div>
+                
+                <div className="flex gap-2 mt-4 md:mt-0 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="px-3 py-1.5 text-[12px] font-medium text-neutral-400 hover:text-neutral-800 rounded transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 text-[12px] font-medium bg-white text-black hover:bg-neutral-200 rounded cursor-pointer transition-colors"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Grid of Shelf Section */}
+      <div className="space-y-4">
+        {/* Shelf Sub Header & Search filters */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-md bg-white border border-neutral-100">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
+            <button
+              onClick={() => setFilterType('All')}
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                filterType === 'All' ? 'bg-neutral-50 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800'
+              }`}
+            >
+              전체 ({bLogs.length})
+            </button>
+            <button
+              onClick={() => setFilterType('reading')}
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                filterType === 'reading' ? 'bg-neutral-50 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800'
+              }`}
+            >
+              읽는 중 ({bLogs.filter(b => b.status === 'reading').length})
+            </button>
+            <button
+              onClick={() => setFilterType('completed')}
+              className={`px-3 py-1.5 h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                filterType === 'completed' ? 'bg-neutral-100 text-neutral-800' : 'text-neutral-400 hover:bg-neutral-50'
+              }`}
+            >
+              완독한 책 ({bLogs.filter(b => b.status === 'completed').length})
+            </button>
+            <button
+              onClick={() => setFilterType('wishlist')}
+              className={`px-3 py-1.5 h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                filterType === 'wishlist' ? 'bg-neutral-100 text-neutral-800' : 'text-neutral-400 hover:bg-neutral-50'
+              }`}
+            >
+              위시리스트 ({bLogs.filter(b => b.status === 'wishlist').length})
+            </button>
+          </div>
+
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-800/30" />
+            <input
+              type="text"
+              placeholder="제목, 작가 검색..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 text-xs bg-neutral-50 border border-neutral-100 rounded-lg focus:outline-hidden focus:border-white/30 text-neutral-800 placeholder:text-neutral-800/20 font-medium"
+            />
+          </div>
+        </div>
+
+        {/* Book Grid */}
+        {filteredBooks.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-md border border-neutral-100">
+            <BookOpen className="h-8 w-8 text-neutral-500 mx-auto mb-3" />
+            <p className="text-sm font-medium text-neutral-400">등록된 도서가 없습니다.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence mode="popLayout">
+              {filteredBooks.map(book => {
+                const percent = Math.round((book.currentPage / book.totalPages) * 100) || 0;
+                return (
+                  <motion.div
+                    key={book.id}
+                    layoutId={`book-card-${book.id}`}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="group relative rounded-sm border border-neutral-100 bg-white p-4 flex flex-col"
+                  >
+                    <div className="flex gap-4 items-start flex-1">
+                      {/* Info details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-1 mb-0.5">
+                          <h4 className="font-medium text-neutral-800 text-[13px] truncate">
+                            {book.title}
+                          </h4>
+                        </div>
+                        <p className="text-[12px] text-neutral-500 mb-2 truncate">
+                          {book.author}
+                        </p>
+
+                        {/* Badges */}
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                            book.status === 'completed' ? 'bg-neutral-100 text-neutral-700' :
+                            book.status === 'reading' ? 'bg-neutral-50 text-neutral-800' :
+                            'bg-neutral-100 text-neutral-500'
+                          }`}>
+                            {book.status === 'completed' ? '✨ 마침' : 
+                             book.status === 'reading' ? '📖 읽는 중' : '📝 위시'}
+                          </span>
+                        </div>
+
+                        {/* Page Count statistics */}
+                        {book.status !== 'wishlist' && (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-medium text-neutral-500">
+                              <span>진도</span>
+                              <span>{book.currentPage} / {book.totalPages} p</span>
+                            </div>
+                            <div className="h-[3px] bg-neutral-50 rounded-full overflow-hidden">
+                              <div className="h-full bg-neutral-400" style={{ width: `${percent}%` }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {book.review && (
+                      <div className="mt-3 p-2 rounded bg-neutral-50 text-[11px] text-neutral-400 line-clamp-2">
+                        “ {book.review} ”
+                      </div>
+                    )}
+
+                    {/* Footer menu buttons */}
+                    <div className="mt-3 pt-3 flex items-center justify-between border-t border-neutral-100">
+                      <button
+                        onClick={() => handleOpenEdit(book)}
+                        className="flex items-center gap-1 text-[11px] font-medium text-neutral-400 hover:text-neutral-800 cursor-pointer"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                        기록 기록/수정
+                      </button>
+                      <button
+                        onClick={() => onDeleteBook(book.id)}
+                        className="p-1 hover:bg-neutral-50 rounded text-neutral-500 hover:text-red-400 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* Progress Modifier Modal */}
+      <AnimatePresence>
+        {selectedBook && (
+          <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 pb-[80px] sm:pb-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[20px] max-w-sm w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4"
+            >
+              <div>
+                <span className="text-[11px] font-medium text-neutral-400 block mb-0.5">상태 기록</span>
+                <h3 className="text-[14px] font-semibold text-neutral-800 truncate">"{selectedBook.title}"</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1">
+                    현재 페이지 (최대 {selectedBook.totalPages}p)
+                  </label>
+                  <input
+                    type="number"
+                    value={editCurrentPage}
+                    onChange={e => setEditCurrentPage(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-neutral-100 rounded focus:outline-hidden text-[13px] text-neutral-800"
+                    max={selectedBook.totalPages}
+                    min={0}
+                  />
+                  <div className="h-[2px] bg-neutral-50 rounded mt-2">
+                    <div 
+                      className="h-full bg-neutral-400 rounded" 
+                      style={{ width: `${Math.min(100, Math.round((editCurrentPage / selectedBook.totalPages) * 100))}%` }} 
+                    />
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {selectedBook.totalPages === editCurrentPage && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="bg-neutral-100 text-neutral-700 p-2.5 rounded text-[12px] font-medium mt-2 flex items-center gap-2">
+                        <span>🎉 완독을 축하합니다!</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1">메모</label>
+                  <textarea
+                    value={editReview}
+                    onChange={e => setEditReview(e.target.value)}
+                    placeholder="짧은 코멘트를 남겨주세요."
+                    className="w-full px-3 py-2 bg-white border border-neutral-100 rounded text-[13px] min-h-[80px] resize-none focus:outline-hidden placeholder:text-neutral-500 text-neutral-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  onClick={() => setSelectedBook(null)}
+                  className="px-3 py-1.5 text-[12px] font-medium text-neutral-400 hover:text-neutral-800 rounded transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-1.5 text-[12px] font-medium bg-white text-black hover:bg-neutral-200 rounded cursor-pointer transition-colors"
+                >
+                  기록 저장
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

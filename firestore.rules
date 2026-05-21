@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    match /users/{userId} {
+      match /public/{docId} {
+        allow read: if isOwner(userId);
+        
+        function isValidUserPublic(data) {
+          return data.keys().hasAll(['name', 'email']) &&
+                 data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+                 data.email is string && data.email.size() > 0 && data.email.size() <= 200;
+        }
+
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(docId) &&
+                         isValidUserPublic(incoming());
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(docId) &&
+                         isValidUserPublic(incoming()) &&
+                         incoming().email == existing().email;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(docId);
+      }
+
+      match /todos/{todoId} {
+        allow read: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        // In query, client will use: where('userId', '==', auth.uid)
+        
+        function isValidTodo(data) {
+          return data.keys().hasAll(['text', 'completed', 'userId']) &&
+                 data.text is string && data.text.size() > 0 && data.text.size() <= 500 &&
+                 data.completed is bool &&
+                 data.userId == request.auth.uid;
+        }
+        
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(todoId) &&
+                         isValidTodo(incoming()) &&
+                         incoming().createdAt == request.time;
+                         
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(todoId) &&
+                         isValidTodo(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasAny(['completed', 'text', 'category', 'priority', 'dueDate', 'updatedAt']);
+                         
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(todoId);
+      }
+
+      match /routines/{routineId} {
+        allow read: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        
+        function isValidRoutine(data) {
+          return data.keys().hasAll(['title', 'completedDays', 'userId']) &&
+                 data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+                 data.completedDays is list && data.completedDays.size() <= 365 &&
+                 data.userId == request.auth.uid;
+        }
+
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(routineId) &&
+                         isValidRoutine(incoming());
+                         
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(routineId) &&
+                         isValidRoutine(incoming()) &&
+                         incoming().userId == existing().userId;
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(routineId);
+      }
+
+      match /books/{bookId} {
+        allow read: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        
+        function isValidBookLog(data) {
+          return data.keys().hasAll(['title', 'author', 'totalPages', 'currentPage', 'status', 'userId']) &&
+                 data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+                 data.author is string && data.author.size() <= 200 &&
+                 data.totalPages is number &&
+                 data.currentPage is number &&
+                 data.status in ['reading', 'completed'] &&
+                 data.userId == request.auth.uid;
+        }
+
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(bookId) &&
+                         isValidBookLog(incoming());
+                         
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(bookId) &&
+                         isValidBookLog(incoming()) &&
+                         incoming().userId == existing().userId;
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(bookId);
+      }
+
+      match /diaries/{diaryId} {
+        allow read: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        
+        function isValidDiary(data) {
+          return data.keys().hasAll(['date', 'title', 'content', 'mood', 'userId']) &&
+                 data.date is string && data.date.size() <= 20 &&
+                 data.title is string && data.title.size() <= 200 &&
+                 data.content is string && data.content.size() <= 50000 &&
+                 data.mood is string && data.mood.size() <= 50 &&
+                 data.userId == request.auth.uid;
+        }
+
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(diaryId) &&
+                         isValidDiary(incoming());
+                         
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(diaryId) &&
+                         isValidDiary(incoming()) &&
+                         incoming().userId == existing().userId;
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(diaryId);
+      }
+    }
+  }
+}

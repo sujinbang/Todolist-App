@@ -1,0 +1,6 @@
+{
+  "name": "투두, 독서기록, 일기 통합 플래너",
+  "description": "할 일 관리(Todo), 독서 기록, 그리고 일기 작성을 하나로 통합한 라이프스타일 대시보드 플래너입니다. 깔끔하고 직관적인 디자인과 로컬 저장소 저장을 지원합니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

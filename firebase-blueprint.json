@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "UserPublic": {
+      "title": "User Public Info",
+      "description": "Public basic information about a user.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User's display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email"
+        }
+      },
+      "required": ["name", "email"]
+    },
+    "Todo": {
+      "title": "Todo Item",
+      "description": "A task created by the user.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "category": { "type": "string" },
+        "priority": { "enum": ["low", "medium", "high"] },
+        "dueDate": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" },
+        "userId": { "type": "string" }
+      },
+      "required": ["text", "completed", "userId"]
+    },
+    "Routine": {
+      "title": "Routine Item",
+      "description": "A routine created by the user.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "completedDays": { "type": "array" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" },
+        "userId": { "type": "string" }
+      },
+      "required": ["title", "completedDays", "userId"]
+    },
+    "BookLog": {
+      "title": "A book log",
+      "description": "A reading record.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "totalPages": { "type": "number" },
+        "currentPage": { "type": "number" },
+        "status": { "enum": ["reading", "completed"] },
+        "review": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "color": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" },
+        "userId": { "type": "string" }
+      },
+      "required": ["title", "author", "totalPages", "currentPage", "status", "userId"]
+    },
+    "DiaryEntry": {
+      "title": "A diary entry",
+      "description": "A user's diary entry.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "mood": { "type": "string" },
+        "weather": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" },
+        "userId": { "type": "string" }
+      },
+      "required": ["date", "title", "content", "mood", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/public": {
+      "schema": { "$ref": "UserPublic" },
+      "description": "User's basic public info"
+    },
+    "/users/{userId}/todos/{todoId}": {
+      "schema": { "$ref": "Todo" },
+      "description": "User's todos"
+    },
+    "/users/{userId}/routines/{routineId}": {
+      "schema": { "$ref": "Routine" },
+      "description": "User's routines"
+    },
+    "/users/{userId}/books/{bookId}": {
+      "schema": { "$ref": "BookLog" },
+      "description": "User's books"
+    },
+    "/users/{userId}/diaries/{diaryId}": {
+      "schema": { "$ref": "DiaryEntry" },
+      "description": "User's diaries"
+    }
+  }
+}
