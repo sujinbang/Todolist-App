@@ -90,12 +90,12 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
   };
 
   return (
-    <div className="space-y-6 text-neutral-800 font-light">
+    <div className="space-y-4 md:space-y-6 text-neutral-800 font-light">
       {/* Profile Banner */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-[20px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 flex items-center justify-between"
+        className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 flex items-center justify-between"
       >
         <div className="flex items-center gap-4">
           <div className="relative group cursor-pointer" onClick={() => isEditingProfile && fileInputRef.current?.click()}>
@@ -137,18 +137,18 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
         </button>
       </motion.div>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
-        
-        {/* Widget 1: Todo Cards Progress (Left Panel, 7 cols) & Quick Add */}
-        <motion.div 
+      {/* Bento Grid - Responsive Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 pt-2">
+
+        {/* Widget 1: Todo Cards Progress */}
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="lg:col-span-7 space-y-6"
+          className="md:col-span-1 lg:col-span-7 space-y-4 md:space-y-6"
         >
           {/* Todo Dashboard Card */}
-          <div id="todo-progress-card" className="rounded-[20px] bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 h-full">
+          <div id="todo-progress-card" className="rounded-[16px] md:rounded-[20px] bg-white p-4 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 h-full">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2 text-neutral-800">
                 <ListTodo className="h-4 w-4 text-[#d9ae92]" strokeWidth={1.5} />
@@ -212,14 +212,14 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
           </div>
         </motion.div>
 
-        {/* Widget 2: Reading Stats & Book slider (Right Panel, 5 cols) */}
-        <motion.div 
+        {/* Widget 2: Reading Stats & Book slider */}
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="lg:col-span-5 space-y-4"
+          className="md:col-span-1 lg:col-span-5 space-y-4"
         >
-          <div id="reading-dashboard-card" className="rounded-[20px] bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 h-full flex flex-col justify-between">
+          <div id="reading-dashboard-card" className="rounded-[16px] md:rounded-[20px] bg-white p-4 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2 text-neutral-800">

@@ -122,13 +122,13 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
     setShowAddForm(false);
   };
 
-  // call optional Gemini AI reflection
+  // call optional AI reflection
   const fetchAiFeedback = async (diaryText: string) => {
     if (!diaryText.trim()) return;
     setIsAiLoading(true);
     setAiReflection('');
     try {
-      const response = await fetch('/api/gemini/reflect', {
+      const response = await fetch('http://localhost:3001/api/gemini/reflect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
 
 interface AuthProps {
   onLoginSuccess: (email: string, name: string) => void;
@@ -11,11 +11,27 @@ interface AuthProps {
 export default function Auth({ onLoginSuccess }: AuthProps) {
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [rememberMe, setRememberMe] = React.useState(() => {
+    // 저장된 자동로그인 설정 불러오기
+    return localStorage.getItem('haru_remember_me') === 'true';
+  });
 
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       setError('');
+
+      // 자동로그인 설정에 따라 persistence 설정
+      if (rememberMe) {
+        // 브라우저를 닫아도 로그인 유지
+        await setPersistence(auth, browserLocalPersistence);
+        localStorage.setItem('haru_remember_me', 'true');
+      } else {
+        // 브라우저를 닫으면 로그아웃
+        await setPersistence(auth, browserSessionPersistence);
+        localStorage.setItem('haru_remember_me', 'false');
+      }
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       if (result.user.email && result.user.displayName) {
@@ -68,10 +84,44 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
               </div>
             )}
 
+            {/* 자동로그인 체크박스 */}
+            <label className="flex items-center gap-3 cursor-pointer group px-1">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <div className={`h-5 w-5 rounded-[6px] border-2 transition-all flex items-center justify-center ${
+                  rememberMe
+                    ? 'bg-neutral-900 border-neutral-900'
+                    : 'bg-white border-neutral-200 group-hover:border-neutral-300'
+                }`}>
+                  {rememberMe && (
+                    <svg
+                      className="h-3 w-3 text-white"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-[13px] text-neutral-600 group-hover:text-neutral-800 transition-colors select-none">
+                자동 로그인
+              </span>
+            </label>
+
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full py-3.5 bg-neutral-900 text-white font-medium rounded-[14px] text-[13px] hover:bg-neutral-800 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-neutral-900/10"
+              className="w-full py-3.5 bg-neutral-900 text-white font-medium rounded-[14px] text-[13px] hover:bg-neutral-800 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-neutral-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="h-4 w-4 border-[1.5px] border-white/30 border-t-white rounded-full animate-spin" />
@@ -82,6 +132,13 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
                 </>
               )}
             </button>
+
+            {/* 자동로그인 안내 */}
+            <p className="text-[11px] text-neutral-400 text-center leading-relaxed px-2">
+              {rememberMe
+                ? '브라우저를 닫아도 로그인 상태가 유지됩니다.'
+                : '브라우저를 닫으면 자동으로 로그아웃됩니다.'}
+            </p>
           </div>
         </div>
       </motion.div>
