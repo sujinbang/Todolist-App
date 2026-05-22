@@ -101,25 +101,37 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim()) {
+      console.log('일기 추가 실패: 제목 또는 내용 누락');
+      return;
+    }
 
-    onAddDiary({
+    const newDiary = {
       title: title.trim(),
       content: content.trim(),
       mood,
       weather,
       date: date || new Date().toISOString().split('T')[0],
       imageUrl,
-    });
+    };
 
-    // Reset fields
-    setTitle('');
-    setContent('');
-    setMood('peaceful');
-    setWeather('sunny');
-    setDate(new Date().toISOString().split('T')[0]);
-    setImageUrl(undefined);
-    setShowAddForm(false);
+    console.log('일기 추가 시도:', newDiary);
+
+    try {
+      onAddDiary(newDiary);
+      console.log('일기 추가 성공');
+
+      // Reset fields
+      setTitle('');
+      setContent('');
+      setMood('peaceful');
+      setWeather('sunny');
+      setDate(new Date().toISOString().split('T')[0]);
+      setImageUrl(undefined);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('일기 추가 중 에러:', error);
+    }
   };
 
   // call optional AI reflection

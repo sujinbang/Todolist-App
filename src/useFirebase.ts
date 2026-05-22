@@ -109,11 +109,43 @@ export function useFirebase() {
   };
 
   const handleAddDiary = async (newDiary: Omit<DiaryEntry, 'id'>) => {
-    if (!user) return;
+    if (!user) {
+      console.error('일기 추가 실패: 사용자 없음');
+      return;
+    }
+
     const id = `d_${Date.now()}`;
     const docRef = doc(db, 'users', user.uid, 'diaries', id);
-    const diaryData = { ...newDiary, userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-    await setDoc(docRef, diaryData).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
+
+    // undefined 필드 제거 (Firebase는 undefined를 허용하지 않음)
+    const diaryData: any = {
+      date: newDiary.date,
+      title: newDiary.title,
+      content: newDiary.content,
+      mood: newDiary.mood,
+      userId: user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    // weather와 imageUrl은 값이 있을 때만 추가
+    if (newDiary.weather !== undefined && newDiary.weather !== null) {
+      diaryData.weather = newDiary.weather;
+    }
+    if (newDiary.imageUrl !== undefined && newDiary.imageUrl !== null && newDiary.imageUrl.trim() !== '') {
+      diaryData.imageUrl = newDiary.imageUrl;
+    }
+
+    console.log('Firebase에 저장할 일기 데이터:', diaryData);
+
+    try {
+      await setDoc(docRef, diaryData);
+      console.log('일기 저장 성공!');
+    } catch (error) {
+      console.error('일기 저장 실패:', error);
+      handleFirestoreError(error as Error, OperationType.CREATE, docRef.path);
+      alert('일기 저장에 실패했습니다. 콘솔을 확인해주세요.');
+    }
   };
   const handleDeleteDiary = async (id: string) => {
     if (!user) return;
