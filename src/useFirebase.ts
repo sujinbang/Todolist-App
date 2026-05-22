@@ -122,11 +122,37 @@ export function useFirebase() {
   };
 
   const handleAddRoutine = async (newRoutine: any) => {
-    if (!user) return;
+    if (!user) {
+      console.error('루틴 추가 실패: 사용자 없음');
+      return;
+    }
+
     const id = `r_${Date.now()}`;
     const docRef = doc(db, 'users', user.uid, 'routines', id);
-    // fallback for empty completedDays in rules validation
-    await setDoc(docRef, { ...newRoutine, completedDays: newRoutine.completedDays || [], userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
+
+    const routineData = {
+      title: newRoutine.title,
+      category: newRoutine.category || 'Work',
+      cyclePeriod: newRoutine.cyclePeriod || 'daily',
+      frequency: newRoutine.frequency || [],
+      monthlyDay: newRoutine.monthlyDay,
+      isActive: newRoutine.isActive !== undefined ? newRoutine.isActive : true,
+      completedDays: newRoutine.completedDays || [],
+      userId: user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    console.log('Firebase에 저장할 루틴 데이터:', routineData);
+
+    try {
+      await setDoc(docRef, routineData);
+      console.log('루틴 저장 성공!');
+    } catch (error) {
+      console.error('루틴 저장 실패:', error);
+      handleFirestoreError(error as Error, OperationType.CREATE, docRef.path);
+      alert('루틴 저장에 실패했습니다. 콘솔을 확인해주세요.');
+    }
   };
   const handleUpdateRoutine = async (id: string, updates: any) => {
     if (!user) return;

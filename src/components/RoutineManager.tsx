@@ -24,20 +24,35 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || (cyclePeriod === 'weekly' && frequency.length === 0)) return;
-    onAddRoutine({
+    if (!title.trim() || (cyclePeriod === 'weekly' && frequency.length === 0)) {
+      console.log('루틴 추가 실패: 유효성 검사 실패', { title, cyclePeriod, frequency });
+      return;
+    }
+
+    const newRoutine = {
       title,
       category,
       cyclePeriod,
       frequency: cyclePeriod === 'weekly' ? frequency : [],
       monthlyDay: cyclePeriod === 'monthly' ? monthlyDay : undefined,
       isActive: true
-    });
-    setTitle('');
-    setFrequency([]);
-    setCyclePeriod('daily');
-    setMonthlyDay(1);
-    setShowAdd(false);
+    };
+
+    console.log('루틴 추가 시도:', newRoutine);
+
+    try {
+      onAddRoutine(newRoutine);
+      console.log('루틴 추가 성공');
+
+      // 폼 초기화
+      setTitle('');
+      setFrequency([]);
+      setCyclePeriod('daily');
+      setMonthlyDay(1);
+      setShowAdd(false);
+    } catch (error) {
+      console.error('루틴 추가 중 에러:', error);
+    }
   };
 
   const toggleDay = (day: any) => {
