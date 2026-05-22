@@ -5,6 +5,8 @@ export interface Todo {
   category: string;
   priority: 'low' | 'medium' | 'high';
   dueDate: string;
+  routineId?: string; // 루틴에서 생성된 할일인 경우
+  isFromRoutine?: boolean; // 루틴 자동 생성 여부
 }
 
 export interface Routine {

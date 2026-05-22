@@ -26,6 +26,7 @@ import ReadingLog from './components/ReadingLog';
 import Diary from './components/Diary';
 import Auth from './components/Auth';
 import { useFirebase } from './useFirebase';
+import { useRoutineTodos } from './useRoutineTodos';
 import { auth } from './firebase';
 
 export default function App() {
@@ -51,6 +52,9 @@ export default function App() {
   } = useFirebase();
 
   const [tab, setTab] = React.useState<'dashboard' | 'todo' | 'routine' | 'reading' | 'diary'>('dashboard');
+
+  // 루틴 기반 할일 자동 생성
+  useRoutineTodos(routines, todos, handleAddTodo);
 
   // Stats calculation for the sidebar preview
   const activeTodosCount = todos.filter(t => !t.completed).length;

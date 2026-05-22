@@ -273,16 +273,21 @@ export default function TodoList({ todos, categories, onAddTodo, onToggleTodo, o
                       </button>
                       
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-medium transition-all truncate leading-tight ${
-                          todo.completed ? 'line-through text-neutral-500' : 'text-neutral-800'
-                        }`}>
-                          {todo.text}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm font-medium transition-all truncate leading-tight ${
+                            todo.completed ? 'line-through text-neutral-500' : 'text-neutral-800'
+                          }`}>
+                            {todo.text}
+                          </p>
+                          {todo.isFromRoutine && (
+                            <RotateCcw className="h-3 w-3 text-blue-500 shrink-0" title="루틴에서 생성됨" />
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
                           {todo.priority === 'high' && <span className="text-[10px] text-red-400 font-medium tracking-wider relative flex items-center gap-0.5"><AlertCircle className="h-2.5 w-2.5" /> High</span>}
                           {todo.priority === 'medium' && <span className="text-[10px] text-yellow-400 font-medium tracking-wider relative flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" /> Med</span>}
                           {todo.priority === 'low' && <span className="text-[10px] text-green-400 font-medium tracking-wider relative flex items-center gap-0.5"><CheckCircle2 className="h-2.5 w-2.5" /> Low</span>}
-                          
+
                           <span className="text-[10px] text-neutral-400 px-1.5 py-0.5 bg-neutral-50 rounded flex items-center gap-1">
                             {todo.category}
                           </span>
