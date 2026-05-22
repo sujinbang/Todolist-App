@@ -130,18 +130,23 @@ export function useFirebase() {
     const id = `r_${Date.now()}`;
     const docRef = doc(db, 'users', user.uid, 'routines', id);
 
-    const routineData = {
+    // undefined 필드 제거 (Firebase는 undefined를 허용하지 않음)
+    const routineData: any = {
       title: newRoutine.title,
       category: newRoutine.category || 'Work',
       cyclePeriod: newRoutine.cyclePeriod || 'daily',
       frequency: newRoutine.frequency || [],
-      monthlyDay: newRoutine.monthlyDay,
       isActive: newRoutine.isActive !== undefined ? newRoutine.isActive : true,
       completedDays: newRoutine.completedDays || [],
       userId: user.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
+
+    // monthlyDay는 값이 있을 때만 추가
+    if (newRoutine.monthlyDay !== undefined && newRoutine.monthlyDay !== null) {
+      routineData.monthlyDay = newRoutine.monthlyDay;
+    }
 
     console.log('Firebase에 저장할 루틴 데이터:', routineData);
 
