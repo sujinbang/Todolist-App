@@ -4,13 +4,22 @@ import { Routine, Todo } from './types';
 /**
  * 루틴이 오늘 실행되어야 하는지 확인
  */
-export function shouldRunToday(routine: Routine): boolean {
+export function shouldRunToday(routine: Routine, dateStr: string): boolean {
   if (!routine.isActive) return false;
   if (routine.isManual) return false;
 
-  const today = new Date();
-  const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()];
-  const dayOfMonth = today.getDate();
+  // 현지 날짜 오차 방지를 위한 수동 날짜 파싱
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return false;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) return false;
+
+  const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+  const dayOfMonth = date.getDate();
 
   switch (routine.cyclePeriod) {
     case 'daily':
@@ -68,7 +77,7 @@ export function useRoutineTodos(
     }
 
     // 활성화된 루틴 중 오늘 실행되어야 하는 루틴 필터링
-    const todaysRoutines = routines.filter(shouldRunToday);
+    const todaysRoutines = routines.filter(r => shouldRunToday(r, today));
 
     todaysRoutines.forEach(routine => {
       // 이미 오늘 생성된 할일이 있는지 확인
