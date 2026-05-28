@@ -30,6 +30,38 @@ interface TodoListProps {
 
 function shouldRunOnDate(routine: Routine, dateStr: string): boolean {
   if (!routine.isActive) return false;
+  if (routine.isManual) return false;
+
+  // 현지 날짜 오차 방지를 위한 수동 날짜 파싱
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return false;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) return false;
+
+  const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+  const dayOfMonth = date.getDate();
+
+  switch (routine.cyclePeriod) {
+    case 'daily':
+      return true;
+
+    case 'weekly':
+      return routine.frequency.includes(dayOfWeek as any);
+
+    case 'monthly':
+      return routine.monthlyDay === dayOfMonth;
+
+    default:
+      return routine.frequency.includes(dayOfWeek as any);
+  }
+}
+
+function isRoutineMatchingDate(routine: Routine, dateStr: string): boolean {
+  if (!routine.isActive) return false;
 
   // 현지 날짜 오차 방지를 위한 수동 날짜 파싱
   const parts = dateStr.split('-');
@@ -194,6 +226,19 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
       const priorityWeight = { high: 3, medium: 2, low: 1 };
       return priorityWeight[b.priority] - priorityWeight[a.priority];
     });
+
+  // Filter active manual routines scheduled for selectedDate that haven't been added yet
+  const manualRoutinesToInject = routines.filter(routine => {
+    if (!routine.isActive || !routine.isManual) return false;
+    
+    const isScheduled = isRoutineMatchingDate(routine, selectedDate);
+    if (!isScheduled) return false;
+
+    const alreadyAdded = todos.some(
+      t => t.routineId === routine.id && t.dueDate === selectedDate
+    );
+    return !alreadyAdded;
+  });
 
   return (
     <div className="space-y-6 text-neutral-800 font-light">
@@ -382,6 +427,53 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
               </AnimatePresence>
             )}
           </div>
+
+          {/* 수동 추가 루틴 섹션 */}
+          {manualRoutinesToInject.length > 0 && (
+            <div className="mt-6 border border-neutral-100 bg-white rounded-[20px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
+              <h3 className="text-xs font-semibold text-neutral-500 tracking-wider uppercase mb-2 flex items-center gap-1.5">
+                <RotateCcw className="h-3.5 w-3.5 text-neutral-400" />
+                수동 추가 루틴
+              </h3>
+              <p className="text-[11px] text-neutral-400 mb-4">
+                이 날짜에 계획된 수동(비활성) 루틴입니다. 클릭하여 할 일 목록에 추가하세요.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {manualRoutinesToInject.map(routine => {
+                  const priorityColor = {
+                    high: 'bg-red-50 text-red-500 border-red-100 hover:bg-red-100/50',
+                    medium: 'bg-yellow-50 text-yellow-700 border-yellow-100 hover:bg-yellow-100/50',
+                    low: 'bg-green-50 text-green-700 border-green-100 hover:bg-green-100/50'
+                  }[routine.priority || 'medium'];
+
+                  return (
+                    <motion.button
+                      key={routine.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        onAddTodo({
+                          text: routine.title,
+                          category: routine.category,
+                          priority: routine.priority || 'medium',
+                          dueDate: selectedDate,
+                          routineId: routine.id,
+                          isFromRoutine: true,
+                        });
+                      }}
+                      className={`px-3.5 py-2 rounded-[12px] border text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${priorityColor}`}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>{routine.title}</span>
+                      <span className="text-[9px] opacity-60 px-1 py-0.2 bg-white/60 rounded">
+                        {routine.category}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

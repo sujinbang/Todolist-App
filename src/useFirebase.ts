@@ -175,6 +175,8 @@ export function useFirebase() {
       cyclePeriod: newRoutine.cyclePeriod || 'daily',
       frequency: newRoutine.frequency || [],
       isActive: newRoutine.isActive !== undefined ? newRoutine.isActive : true,
+      priority: newRoutine.priority || 'medium',
+      isManual: newRoutine.isManual !== undefined ? newRoutine.isManual : false,
       completedDays: newRoutine.completedDays || [],
       userId: user.uid,
       createdAt: serverTimestamp(),
@@ -200,7 +202,16 @@ export function useFirebase() {
   const handleUpdateRoutine = async (id: string, updates: any) => {
     if (!user) return;
     const docRef = doc(db, 'users', user.uid, 'routines', id);
-    await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() }).catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
+    
+    // undefined 필드 제거 (Firebase는 undefined 필드 저장을 허용하지 않음)
+    const cleanUpdates: any = { updatedAt: serverTimestamp() };
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        cleanUpdates[key] = updates[key];
+      }
+    });
+
+    await updateDoc(docRef, cleanUpdates).catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
   };
   const handleDeleteRoutine = async (id: string) => {
     if (!user) return;

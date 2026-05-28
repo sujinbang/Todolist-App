@@ -182,13 +182,13 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
             </div>
 
             {/* Mini Todolist Peek */}
-            <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
+            <div className="space-y-0.5 max-h-[260px] overflow-y-auto pr-1">
               {todayTodos.length === 0 ? (
                 <div className="text-center py-6 text-neutral-400 text-[12px]">
                   오늘 등록된 할 일이 없습니다.
                 </div>
               ) : (
-                todayTodos.slice(0, 3).map(todo => (
+                todayTodos.slice(0, 5).map(todo => (
                   <div 
                     key={todo.id} 
                     className="flex items-center justify-between p-3 rounded-[12px] bg-transparent hover:bg-[#faf9f7] text-[13px] transition-colors cursor-pointer group"

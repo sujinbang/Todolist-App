@@ -18,6 +18,7 @@ export interface Routine {
   frequency: ('Mon'|'Tue'|'Wed'|'Thu'|'Fri'|'Sat'|'Sun')[];
   isActive: boolean;
   priority?: 'low' | 'medium' | 'high'; // 루틴의 기본 우선순위
+  isManual?: boolean; // 수동 추가 모드 (비활성 루틴 여부)
 }
 
 export interface BookLog {

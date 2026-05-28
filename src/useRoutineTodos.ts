@@ -6,6 +6,7 @@ import { Routine, Todo } from './types';
  */
 export function shouldRunToday(routine: Routine): boolean {
   if (!routine.isActive) return false;
+  if (routine.isManual) return false;
 
   const today = new Date();
   const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()];

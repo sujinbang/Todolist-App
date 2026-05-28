@@ -25,6 +25,7 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
   const [frequency, setFrequency] = React.useState<Routine['frequency']>([]);
   const [monthlyDay, setMonthlyDay] = React.useState<number>(1);
   const [priority, setPriority] = React.useState<Routine['priority']>('medium');
+  const [isManual, setIsManual] = React.useState(false);
 
   const handleStartEdit = (routine: Routine) => {
     setEditingRoutine(routine);
@@ -34,6 +35,7 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
     setFrequency(routine.frequency || []);
     setMonthlyDay(routine.monthlyDay || 1);
     setPriority(routine.priority || 'medium');
+    setIsManual(routine.isManual || false);
     setShowEdit(true);
   };
 
@@ -51,7 +53,8 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
       frequency: cyclePeriod === 'weekly' ? frequency : [],
       monthlyDay: cyclePeriod === 'monthly' ? monthlyDay : undefined,
       isActive: true,
-      priority
+      priority,
+      isManual
     };
 
     console.log('루틴 추가 시도:', newRoutine);
@@ -66,6 +69,7 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
       setCyclePeriod('daily');
       setMonthlyDay(1);
       setPriority('medium');
+      setIsManual(false);
       setShowAdd(false);
     } catch (error) {
       console.error('루틴 추가 중 에러:', error);
@@ -78,14 +82,19 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
       return;
     }
 
-    onUpdateRoutine(editingRoutine.id, {
+    const updates: any = {
       title,
       category,
       cyclePeriod,
       frequency: cyclePeriod === 'weekly' ? frequency : [],
-      monthlyDay: cyclePeriod === 'monthly' ? monthlyDay : undefined,
-      priority
-    });
+      priority,
+      isManual
+    };
+    if (cyclePeriod === 'monthly') {
+      updates.monthlyDay = monthlyDay;
+    }
+
+    onUpdateRoutine(editingRoutine.id, updates);
 
     // 폼 초기화
     setTitle('');
@@ -93,6 +102,7 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
     setCyclePeriod('daily');
     setMonthlyDay(1);
     setPriority('medium');
+    setIsManual(false);
     setShowEdit(false);
     setEditingRoutine(null);
   };
@@ -140,6 +150,11 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-50 text-neutral-400">
                         {routine.category}
                       </span>
+                      {routine.isManual ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">수동</span>
+                      ) : (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">자동</span>
+                      )}
                       {routine.priority === 'high' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 font-medium">높음</span>}
                       {routine.priority === 'medium' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-600 font-medium">보통</span>}
                       {routine.priority === 'low' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 font-medium">낮음</span>}
@@ -241,6 +256,35 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                         <option key={cat} value={cat} className="bg-white text-neutral-800">{cat}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">생성 방식</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsManual(false)}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          !isManual ? 'bg-neutral-900 border-neutral-900 text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        자동 생성 (활성)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsManual(true)}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          isManual ? 'bg-neutral-900 border-neutral-900 text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        수동 추가 (비활성)
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-neutral-400 mt-1 leading-normal">
+                      {!isManual 
+                        ? '설정된 주기에 맞춰 날짜별로 할 일이 자동으로 생성됩니다.' 
+                        : '할 일 목록 아래에 표시되며, 클릭 시 해당 날짜의 할 일로 직접 추가합니다.'}
+                    </p>
                   </div>
 
                   <div>
@@ -398,6 +442,35 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                         <option key={cat} value={cat} className="bg-white text-neutral-800">{cat}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">생성 방식</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsManual(false)}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          !isManual ? 'bg-neutral-900 border-neutral-900 text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        자동 생성 (활성)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsManual(true)}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          isManual ? 'bg-neutral-900 border-neutral-900 text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        수동 추가 (비활성)
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-neutral-400 mt-1 leading-normal">
+                      {!isManual 
+                        ? '설정된 주기에 맞춰 날짜별로 할 일이 자동으로 생성됩니다.' 
+                        : '할 일 목록 아래에 표시되며, 클릭 시 해당 날짜의 할 일로 직접 추가합니다.'}
+                    </p>
                   </div>
 
                   <div>
