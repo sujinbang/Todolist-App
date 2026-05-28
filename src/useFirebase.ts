@@ -70,11 +70,17 @@ export function useFirebase() {
   }, [user]);
 
   // Actions
-  const handleAddTodo = async (newTodo: Omit<Todo, 'id' | 'completed'>) => {
+  const handleAddTodo = async (newTodo: Omit<Todo, 'id'> & { completed?: boolean }) => {
     if (!user) return;
     const id = `t_${Date.now()}`;
     const docRef = doc(db, 'users', user.uid, 'todos', id);
-    await setDoc(docRef, { ...newTodo, completed: false, userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
+    await setDoc(docRef, {
+      completed: false,
+      ...newTodo,
+      userId: user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
   };
   const handleToggleTodo = async (id: string) => {
      if (!user) return;

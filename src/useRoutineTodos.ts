@@ -82,7 +82,7 @@ export function useRoutineTodos(
         onAddTodo({
           text: routine.title,
           category: routine.category,
-          priority: 'medium',
+          priority: routine.priority || 'medium',
           dueDate: today,
           routineId: routine.id,
           isFromRoutine: true,

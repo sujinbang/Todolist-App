@@ -16,11 +16,26 @@ const DAY_LABELS = { Mon: '월', Tue: '화', Wed: '수', Thu: '목', Fri: '금',
 
 export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine, onDeleteRoutine, categories }: RoutineManagerProps) {
   const [showAdd, setShowAdd] = React.useState(false);
+  const [showEdit, setShowEdit] = React.useState(false);
+  const [editingRoutine, setEditingRoutine] = React.useState<Routine | null>(null);
+
   const [title, setTitle] = React.useState('');
   const [category, setCategory] = React.useState(categories[0] || 'Work');
   const [cyclePeriod, setCyclePeriod] = React.useState<Routine['cyclePeriod']>('daily');
   const [frequency, setFrequency] = React.useState<Routine['frequency']>([]);
   const [monthlyDay, setMonthlyDay] = React.useState<number>(1);
+  const [priority, setPriority] = React.useState<Routine['priority']>('medium');
+
+  const handleStartEdit = (routine: Routine) => {
+    setEditingRoutine(routine);
+    setTitle(routine.title);
+    setCategory(routine.category);
+    setCyclePeriod(routine.cyclePeriod || 'daily');
+    setFrequency(routine.frequency || []);
+    setMonthlyDay(routine.monthlyDay || 1);
+    setPriority(routine.priority || 'medium');
+    setShowEdit(true);
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +50,8 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
       cyclePeriod,
       frequency: cyclePeriod === 'weekly' ? frequency : [],
       monthlyDay: cyclePeriod === 'monthly' ? monthlyDay : undefined,
-      isActive: true
+      isActive: true,
+      priority
     };
 
     console.log('루틴 추가 시도:', newRoutine);
@@ -49,10 +65,36 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
       setFrequency([]);
       setCyclePeriod('daily');
       setMonthlyDay(1);
+      setPriority('medium');
       setShowAdd(false);
     } catch (error) {
       console.error('루틴 추가 중 에러:', error);
     }
+  };
+
+  const handleEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoutine || !title.trim() || (cyclePeriod === 'weekly' && frequency.length === 0)) {
+      return;
+    }
+
+    onUpdateRoutine(editingRoutine.id, {
+      title,
+      category,
+      cyclePeriod,
+      frequency: cyclePeriod === 'weekly' ? frequency : [],
+      monthlyDay: cyclePeriod === 'monthly' ? monthlyDay : undefined,
+      priority
+    });
+
+    // 폼 초기화
+    setTitle('');
+    setFrequency([]);
+    setCyclePeriod('daily');
+    setMonthlyDay(1);
+    setPriority('medium');
+    setShowEdit(false);
+    setEditingRoutine(null);
   };
 
   const toggleDay = (day: any) => {
@@ -98,6 +140,9 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-50 text-neutral-400">
                         {routine.category}
                       </span>
+                      {routine.priority === 'high' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 font-medium">높음</span>}
+                      {routine.priority === 'medium' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-600 font-medium">보통</span>}
+                      {routine.priority === 'low' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 font-medium">낮음</span>}
                     </div>
                     <div className="flex gap-1.5">
                       {(!routine.cyclePeriod || routine.cyclePeriod === 'weekly') ? (
@@ -119,6 +164,13 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:self-center self-end">
+                    <button 
+                      onClick={() => handleStartEdit(routine)}
+                      className="p-1.5 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 rounded cursor-pointer"
+                      title="루틴 수정"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
                     <button 
                       onClick={() => onUpdateRoutine(routine.id, { isActive: !routine.isActive })}
                       className={`px-3 py-1.5 rounded text-[12px] font-medium transition-colors cursor-pointer ${
@@ -258,6 +310,30 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                     )}
                   </div>
 
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">우선순위</label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'high', label: '높음' },
+                        { value: 'medium', label: '보통' },
+                        { value: 'low', label: '낮음' }
+                      ].map(p => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setPriority(p.value as any)}
+                          className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                            priority === p.value 
+                              ? 'bg-neutral-900 border-neutral-900 text-white' 
+                              : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="pt-2">
                     <button
                       type="submit"
@@ -265,6 +341,163 @@ export default function RoutineManager({ routines, onAddRoutine, onUpdateRoutine
                       className="w-full py-2 bg-[#d9ae92] text-white rounded-[12px] text-[13px] font-medium hover:bg-[#c99e82] disabled:opacity-50 transition-colors cursor-pointer"
                     >
                       등록하기
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {showEdit && editingRoutine && (
+          <div className="fixed inset-0 z-[60] bg-black/60 flex justify-center items-end sm:items-center p-4 pb-[80px] sm:pb-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-sm bg-white border border-neutral-100 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden relative"
+            >
+              <div className="flex justify-between items-center px-4 py-3 border-b border-neutral-100 bg-neutral-50">
+                <h3 className="font-semibold text-neutral-800 text-[13px]">
+                  루틴 수정
+                </h3>
+                <button 
+                  onClick={() => { setShowEdit(false); setEditingRoutine(null); }}
+                  className="p-1 text-neutral-500 hover:text-neutral-800 rounded cursor-pointer transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-5">
+                <form className="space-y-4" onSubmit={handleEdit}>
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">내용</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={e => setTitle(e.target.value)}
+                      placeholder="매일 아침 스트레칭"
+                      className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-none focus:border-neutral-500 text-neutral-800 placeholder:text-neutral-500"
+                      autoFocus
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">카테고리</label>
+                    <select
+                      value={category}
+                      onChange={e => setCategory(e.target.value)}
+                      className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-none focus:border-neutral-500 text-neutral-800"
+                    >
+                      {categories.map(cat => (
+                        <option key={cat} value={cat} className="bg-white text-neutral-800">{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-2">반복 주기</label>
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setCyclePeriod('daily')}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          cyclePeriod === 'daily' ? 'bg-[#9fbb9f] border-[#9fbb9f] text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        매일
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCyclePeriod('weekly')}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          cyclePeriod === 'weekly' ? 'bg-[#9fbb9f] border-[#9fbb9f] text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        매주
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCyclePeriod('monthly')}
+                        className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                          cyclePeriod === 'monthly' ? 'bg-[#9fbb9f] border-[#9fbb9f] text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                        }`}
+                      >
+                        매월
+                      </button>
+                    </div>
+
+                    {cyclePeriod === 'weekly' && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {WEEK_DAYS.map(day => {
+                          const isSelected = frequency.includes(day as any);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => toggleDay(day)}
+                              className={`flex-1 min-w-[36px] py-1.5 rounded text-[12px] font-medium border transition-colors cursor-pointer ${
+                                isSelected ? 'bg-neutral-600 border-neutral-600 text-white' : 'bg-white border-neutral-200 text-neutral-500 hover:text-neutral-800'
+                              }`}
+                            >
+                              {DAY_LABELS[day as keyof typeof DAY_LABELS]}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {cyclePeriod === 'monthly' && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[12px] text-neutral-500">매월</span>
+                        <select
+                          value={monthlyDay}
+                          onChange={(e) => setMonthlyDay(Number(e.target.value))}
+                          className="px-3 py-1.5 text-[12px] bg-white border border-neutral-200 rounded-[8px] focus:outline-none focus:border-neutral-500 text-neutral-800"
+                        >
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                            <option key={d} value={d}>{d}일</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-400 mb-1">우선순위</label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'high', label: '높음' },
+                        { value: 'medium', label: '보통' },
+                        { value: 'low', label: '낮음' }
+                      ].map(p => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setPriority(p.value as any)}
+                          className={`flex-1 py-1.5 rounded-[12px] text-[12px] font-medium border transition-colors cursor-pointer ${
+                            priority === p.value 
+                              ? 'bg-neutral-900 border-neutral-900 text-white' 
+                              : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={!title.trim() || (cyclePeriod === 'weekly' && frequency.length === 0)}
+                      className="w-full py-2 bg-[#d9ae92] text-white rounded-[12px] text-[13px] font-medium hover:bg-[#c99e82] disabled:opacity-50 transition-colors cursor-pointer"
+                    >
+                      수정하기
                     </button>
                   </div>
                 </form>

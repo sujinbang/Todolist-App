@@ -14,12 +14,13 @@ import {
   RotateCcw,
   AlertCircle
 } from 'lucide-react';
-import { Todo } from '../types';
+import { Todo, Routine } from '../types';
 
 interface TodoListProps {
   todos: Todo[];
+  routines: Routine[];
   categories: string[];
-  onAddTodo: (todo: Omit<Todo, 'id' | 'completed'>) => void;
+  onAddTodo: (todo: Omit<Todo, 'id'> & { completed?: boolean }) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
   onAddCategory: (cat: string) => void;
@@ -27,7 +28,38 @@ interface TodoListProps {
   setTab: (tab: any) => void;
 }
 
-export default function TodoList({ todos, categories, onAddTodo, onToggleTodo, onDeleteTodo, onAddCategory, onDeleteCategory, setTab }: TodoListProps) {
+function shouldRunOnDate(routine: Routine, dateStr: string): boolean {
+  if (!routine.isActive) return false;
+
+  // 현지 날짜 오차 방지를 위한 수동 날짜 파싱
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return false;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) return false;
+
+  const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+  const dayOfMonth = date.getDate();
+
+  switch (routine.cyclePeriod) {
+    case 'daily':
+      return true;
+
+    case 'weekly':
+      return routine.frequency.includes(dayOfWeek as any);
+
+    case 'monthly':
+      return routine.monthlyDay === dayOfMonth;
+
+    default:
+      return routine.frequency.includes(dayOfWeek as any);
+  }
+}
+
+export default function TodoList({ todos, routines, categories, onAddTodo, onToggleTodo, onDeleteTodo, onAddCategory, onDeleteCategory, setTab }: TodoListProps) {
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showYearModal, setShowYearModal] = React.useState(false);
   const [addMode, setAddMode] = React.useState<'todo' | 'category'>('todo');
@@ -124,8 +156,34 @@ export default function TodoList({ todos, categories, onAddTodo, onToggleTodo, o
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
 
+  // Generate Virtual Todos for active routines scheduled for selectedDate
+  const virtualRoutineTodos: Todo[] = [];
+  routines.forEach(routine => {
+    if (shouldRunOnDate(routine, selectedDate)) {
+      // Check if a real todo already exists for this routine on this date
+      const realTodoExists = todos.some(
+        t => t.routineId === routine.id && t.dueDate === selectedDate
+      );
+      if (!realTodoExists) {
+        virtualRoutineTodos.push({
+          id: `virtual_${routine.id}_${selectedDate}`,
+          text: routine.title,
+          completed: false,
+          category: routine.category,
+          priority: routine.priority || 'medium',
+          dueDate: selectedDate,
+          routineId: routine.id,
+          isFromRoutine: true,
+          isVirtual: true // Custom flag to identify virtual item
+        } as any);
+      }
+    }
+  });
+
+  const allItems = [...todos, ...virtualRoutineTodos];
+
   // Filtering list
-  const filteredTodos = todos
+  const filteredTodos = allItems
     .filter(todo => {
       const dateMatches = todo.dueDate === selectedDate;
       const textMatches = todo.text.toLowerCase().includes(searchQuery.toLowerCase());
@@ -180,7 +238,9 @@ export default function TodoList({ todos, categories, onAddTodo, onToggleTodo, o
             {monthDates.map((dayInfo, idx) => {
               const isSelected = dayInfo.dateString === selectedDate;
               const isToday = dayInfo.dateString === new Date().toISOString().split('T')[0];
-              const hasTodos = todos.some(t => t.dueDate === dayInfo.dateString);
+              const hasRealTodos = todos.some(t => t.dueDate === dayInfo.dateString);
+              const hasRoutineTodos = routines.some(r => shouldRunOnDate(r, dayInfo.dateString));
+              const hasTodos = hasRealTodos || hasRoutineTodos;
               return (
                 <button
                   key={`${dayInfo.dateString}-${idx}`}
@@ -262,7 +322,21 @@ export default function TodoList({ todos, categories, onAddTodo, onToggleTodo, o
                   >
                     <div className="flex items-start gap-3.5 flex-1 min-w-0">
                       <button
-                        onClick={() => onToggleTodo(todo.id)}
+                        onClick={() => {
+                          if ((todo as any).isVirtual) {
+                            onAddTodo({
+                              text: todo.text,
+                              category: todo.category,
+                              priority: todo.priority,
+                              dueDate: todo.dueDate,
+                              routineId: todo.routineId,
+                              isFromRoutine: true,
+                              completed: true
+                            } as any);
+                          } else {
+                            onToggleTodo(todo.id);
+                          }
+                        }}
                         className={`mt-0.5 shrink-0 flex items-center justify-center h-4 w-4 rounded-sm border transition-all cursor-pointer ${
                           todo.completed 
                             ? 'bg-neutral-300 border-neutral-300 text-black' 
@@ -295,12 +369,14 @@ export default function TodoList({ todos, categories, onAddTodo, onToggleTodo, o
                       </div>
                     </div>
                     
-                    <button
-                      onClick={() => onDeleteTodo(todo.id)}
-                      className="mt-3 sm:mt-0 p-1 text-neutral-500 hover:text-red-400 hover:bg-neutral-50 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer shrink-0 self-end sm:self-center"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {!((todo as any).isVirtual) && (
+                      <button
+                        onClick={() => onDeleteTodo(todo.id)}
+                        className="mt-3 sm:mt-0 p-1 text-neutral-500 hover:text-red-400 hover:bg-neutral-50 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer shrink-0 self-end sm:self-center"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </motion.div>
                 ))}
               </AnimatePresence>

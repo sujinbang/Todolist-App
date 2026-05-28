@@ -217,6 +217,7 @@ export default function App() {
               {tab === 'todo' && (
                 <TodoList
                   todos={todos}
+                  routines={routines}
                   categories={categories}
                   onAddTodo={handleAddTodo}
                   onToggleTodo={handleToggleTodo}
