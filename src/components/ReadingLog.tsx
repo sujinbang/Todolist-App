@@ -35,6 +35,7 @@ const jacketColors = [
 export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDeleteBook }: ReadingLogProps) {
   const [showAddForm, setShowAddForm] = React.useState(false);
   const [selectedBook, setSelectedBook] = React.useState<BookLog | null>(null);
+  const [viewingReviewBook, setViewingReviewBook] = React.useState<BookLog | null>(null);
 
   // Add Book inputs
   const [title, setTitle] = React.useState('');
@@ -343,7 +344,11 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                     </div>
 
                     {book.review && (
-                      <div className="mt-3 p-2 rounded bg-neutral-50 text-[11px] text-neutral-400 line-clamp-2">
+                      <div 
+                        onClick={() => setViewingReviewBook(book)}
+                        className="mt-3 p-2.5 rounded-[12px] bg-neutral-50 hover:bg-neutral-100/70 text-[11px] text-neutral-500 line-clamp-2 cursor-pointer transition-colors border border-transparent hover:border-neutral-100"
+                        title="기록 전체 보기"
+                      >
                         “ {book.review} ”
                       </div>
                     )}
@@ -446,6 +451,66 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                   className="px-4 py-1.5 text-[12px] font-medium bg-white text-black hover:bg-neutral-200 rounded cursor-pointer transition-colors"
                 >
                   기록 저장
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Review Viewer Modal */}
+      <AnimatePresence>
+        {viewingReviewBook && (
+          <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 pb-[80px] sm:pb-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[24px] max-w-md w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-5 text-neutral-800"
+            >
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-semibold text-[#9fbb9f] tracking-wider uppercase">독서 기록 감상</span>
+                  <h3 className="text-[15px] font-semibold text-neutral-800 leading-tight truncate max-w-[200px]" title={viewingReviewBook.title}>
+                    {viewingReviewBook.title}
+                  </h3>
+                  <p className="text-[12px] text-neutral-400 font-light truncate max-w-[200px]" title={viewingReviewBook.author}>{viewingReviewBook.author}</p>
+                </div>
+                <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${
+                  viewingReviewBook.status === 'completed' ? 'bg-[#d5e0d8] text-neutral-700' :
+                  viewingReviewBook.status === 'reading' ? 'bg-neutral-50 text-neutral-600' :
+                  'bg-neutral-100 text-neutral-500'
+                }`}>
+                  {viewingReviewBook.status === 'completed' ? '✨ 완독' : 
+                   viewingReviewBook.status === 'reading' ? '📖 읽는 중' : '📝 위시'}
+                </span>
+              </div>
+
+              {viewingReviewBook.status !== 'wishlist' && (
+                <div className="p-3 bg-[#faf9f7] rounded-[12px] text-[11px] text-neutral-500 space-y-1 flex items-center justify-between">
+                  <div>
+                    <span className="text-neutral-400">읽은 페이지: </span>
+                    <span className="font-medium text-neutral-700">{viewingReviewBook.currentPage} / {viewingReviewBook.totalPages}p</span>
+                  </div>
+                  <span className="text-[10px] font-medium px-2 py-0.5 bg-white border border-neutral-100 rounded-full">
+                    {Math.round((viewingReviewBook.currentPage / viewingReviewBook.totalPages) * 100) || 0}% 완료
+                  </span>
+                </div>
+              )}
+
+              <div className="border-t border-neutral-100 pt-4">
+                <label className="block text-[11px] font-semibold text-neutral-400 tracking-wide uppercase mb-2">남긴 기록/메모</label>
+                <div className="bg-neutral-50/50 border border-neutral-100 rounded-[16px] p-4 text-[13px] text-neutral-600 leading-relaxed font-light whitespace-pre-wrap max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {viewingReviewBook.review}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setViewingReviewBook(null)}
+                  className="h-9 px-5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-[12px] text-[12px] font-medium transition-colors cursor-pointer"
+                >
+                  닫기
                 </button>
               </div>
             </motion.div>
