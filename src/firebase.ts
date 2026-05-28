@@ -1,11 +1,16 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); // CRITICAL: The app will break without this line
 export const auth = getAuth(app);
+
+// 기본 로그인 세션 지속성 설정: 브라우저가 닫혀도 로그인이 풀리지 않도록 설정 (로컬 스토리지 방식)
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.error('Failed to set Firebase Auth persistence:', err);
+});
 
 export enum OperationType {
   CREATE = 'create',

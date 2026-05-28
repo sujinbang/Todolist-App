@@ -11,26 +11,14 @@ interface AuthProps {
 export default function Auth({ onLoginSuccess }: AuthProps) {
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [rememberMe, setRememberMe] = React.useState(() => {
-    // 저장된 자동로그인 설정 불러오기
-    return localStorage.getItem('haru_remember_me') === 'true';
-  });
 
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       setError('');
 
-      // 자동로그인 설정에 따라 persistence 설정
-      if (rememberMe) {
-        // 브라우저를 닫아도 로그인 유지
-        await setPersistence(auth, browserLocalPersistence);
-        localStorage.setItem('haru_remember_me', 'true');
-      } else {
-        // 브라우저를 닫으면 로그아웃
-        await setPersistence(auth, browserSessionPersistence);
-        localStorage.setItem('haru_remember_me', 'false');
-      }
+      // 명시적으로 로그아웃 버튼을 누르기 전까지 세션을 영구적으로 유지
+      await setPersistence(auth, browserLocalPersistence);
 
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -84,40 +72,6 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
               </div>
             )}
 
-            {/* 자동로그인 체크박스 */}
-            <label className="flex items-center gap-3 cursor-pointer group px-1">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="peer sr-only"
-                />
-                <div className={`h-5 w-5 rounded-[6px] border-2 transition-all flex items-center justify-center ${
-                  rememberMe
-                    ? 'bg-neutral-900 border-neutral-900'
-                    : 'bg-white border-neutral-200 group-hover:border-neutral-300'
-                }`}>
-                  {rememberMe && (
-                    <svg
-                      className="h-3 w-3 text-white"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.5"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              <span className="text-[13px] text-neutral-600 group-hover:text-neutral-800 transition-colors select-none">
-                자동 로그인
-              </span>
-            </label>
-
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
@@ -135,9 +89,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
             {/* 자동로그인 안내 */}
             <p className="text-[11px] text-neutral-400 text-center leading-relaxed px-2">
-              {rememberMe
-                ? '브라우저를 닫아도 로그인 상태가 유지됩니다.'
-                : '브라우저를 닫으면 자동으로 로그아웃됩니다.'}
+              로그아웃 버튼을 직접 누르기 전까지 로그인 상태가 계속 유지됩니다.
             </p>
           </div>
         </div>
