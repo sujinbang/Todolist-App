@@ -31,7 +31,10 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
   const [content, setContent] = React.useState('');
   const [mood, setMood] = React.useState<DiaryEntry['mood']>('peaceful');
   const [weather, setWeather] = React.useState<DiaryEntry['weather']>('sunny');
-  const [date, setDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = React.useState(() => {
+    const d = new Date();
+    return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  });
   const [imageUrl, setImageUrl] = React.useState<string | undefined>(undefined);
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -100,7 +103,10 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
       content: content.trim(),
       mood,
       weather,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || (() => {
+        const d = new Date();
+        return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      })(),
       imageUrl,
     };
 
@@ -115,7 +121,10 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
       setContent('');
       setMood('peaceful');
       setWeather('sunny');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(() => {
+        const d = new Date();
+        return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      });
       setImageUrl(undefined);
       setShowAddForm(false);
     } catch (error) {

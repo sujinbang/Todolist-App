@@ -105,7 +105,10 @@ export function useFirebase() {
     if (!user) return;
     const docRef = doc(db, 'users', user.uid, 'books', id);
     const updates: any = { currentPage, status, review, updatedAt: serverTimestamp() };
-    if (status === 'completed') updates.endDate = new Date().toISOString().split('T')[0];
+    if (status === 'completed') updates.endDate = (() => {
+      const d = new Date();
+      return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    })();
     await updateDoc(docRef, updates).catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
   };
   const handleDeleteBook = async (id: string) => {

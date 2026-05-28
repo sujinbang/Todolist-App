@@ -54,7 +54,8 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
   };
 
   // Stats calculation (오늘 날짜의 할 일만 필터링하여 홈 대시보드에 표시)
-  const todayStr = new Date().toISOString().split('T')[0];
+  const localDate = new Date();
+  const todayStr = new Date(localDate.getTime() - (localDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
   const todayTodos = todos.filter(t => t.dueDate === todayStr);
 
   const totalTodos = todayTodos.length;

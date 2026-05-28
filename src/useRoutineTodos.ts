@@ -32,7 +32,8 @@ export function shouldRunToday(routine: Routine): boolean {
  * 오늘 날짜 문자열 (YYYY-MM-DD)
  */
 export function getTodayString(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 }
 
 /**

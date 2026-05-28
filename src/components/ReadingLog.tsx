@@ -65,7 +65,10 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
       currentPage: status === 'completed' ? totalPages : Math.min(currentPage, totalPages),
       status,
       review: review.trim() || undefined,
-      startDate: new Date().toISOString().split('T')[0],
+      startDate: (() => {
+        const d = new Date();
+        return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      })(),
       color: randomColor,
     });
 

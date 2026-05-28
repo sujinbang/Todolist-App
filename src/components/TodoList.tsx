@@ -100,7 +100,10 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
   const [newText, setNewText] = React.useState('');
   const [category, setCategory] = React.useState<string>(categories[0] || '');
   const [priority, setPriority] = React.useState<Todo['priority']>('medium');
-  const [dueDate, setDueDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = React.useState(() => {
+    const d = new Date();
+    return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  });
 
   // Category Form
   const [newCategoryName, setNewCategoryName] = React.useState('');
@@ -109,7 +112,10 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
   const [filterCategory, setFilterCategory] = React.useState<string>('All');
   
   // By default, select today
-  const [selectedDate, setSelectedDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = React.useState(() => {
+    const d = new Date();
+    return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  });
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,7 +288,10 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
           <div className="grid grid-cols-7 gap-1">
             {monthDates.map((dayInfo, idx) => {
               const isSelected = dayInfo.dateString === selectedDate;
-              const isToday = dayInfo.dateString === new Date().toISOString().split('T')[0];
+              const isToday = dayInfo.dateString === (() => {
+                const d = new Date();
+                return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+              })();
               const hasRealTodos = todos.some(t => t.dueDate === dayInfo.dateString);
               const hasRoutineTodos = routines.some(r => shouldRunOnDate(r, dayInfo.dateString));
               const hasTodos = hasRealTodos || hasRoutineTodos;
