@@ -3,15 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
   Trash2, 
-  PenTool, 
   Search, 
-  Sparkles,
-  Heart,
   Calendar,
-  Layers,
-  HelpCircle,
-  Loader2,
-  CloudLightning,
   Lock,
   Unlock,
   Key,
@@ -68,10 +61,6 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedMoodFilter, setSelectedMoodFilter] = React.useState<string>('All');
   const [activeDiary, setActiveDiary] = React.useState<DiaryEntry | null>(null);
-
-  // AI reflection state
-  const [aiReflection, setAiReflection] = React.useState('');
-  const [isAiLoading, setIsAiLoading] = React.useState(false);
 
   const moodIcons: Record<DiaryEntry['mood'], string> = {
     happy: '✨',
@@ -131,33 +120,6 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
       setShowAddForm(false);
     } catch (error) {
       console.error('일기 추가 중 에러:', error);
-    }
-  };
-
-  // call optional AI reflection
-  const fetchAiFeedback = async (diaryText: string) => {
-    if (!diaryText.trim()) return;
-    setIsAiLoading(true);
-    setAiReflection('');
-    try {
-      const response = await fetch('http://localhost:3001/api/gemini/reflect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: diaryText }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAiReflection(data.reflection);
-      } else {
-        // Fallback friendly message if backend key is unconfigured
-        setAiReflection("오늘은 참 수고가 많으셨습니다. 적어주신 소중한 일기를 찬찬히 돌아보면 오늘의 작은 위로가 내일을 단단하게 가꾸어 갈 발판이 될 것입니다. 늘 당신을 응원합니다. (AI 가이드 환경을 구성하시려면 Settings > Secrets에서 GEMINI_API_KEY를 주입해 주세요.)");
-      }
-    } catch (error) {
-      setAiReflection("어떤 순간들이 모여 오늘의 우리가 되었을까요? 조용히 마인드와 호흡을 가다듬으며, 평온한 기운을 가득 모아 나를 안아주세요.");
-    } finally {
-      setIsAiLoading(false);
     }
   };
 
@@ -377,21 +339,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
                 </div>
               </div>
 
-              {/* Trigger Button Row */}
               <div className="flex gap-2 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => fetchAiFeedback(content)}
-                  disabled={!content.trim() || isAiLoading}
-                  className="px-3 py-1.5 bg-transparent border border-neutral-100 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-800 rounded text-[12px] font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isAiLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  AI 피드백
-                </button>
                 <button
                   type="submit"
                   className="px-4 py-1.5 bg-white text-black hover:bg-neutral-200 rounded text-[12px] font-medium cursor-pointer transition-colors"
@@ -401,30 +349,6 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
               </div>
             </form>
           </div>
-
-          {/* AI Advice Display container */}
-          {(isAiLoading || aiReflection) && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-md border border-neutral-100 bg-white p-5 space-y-3"
-            >
-              <div className="flex items-center gap-1.5 text-neutral-700 font-medium text-[12px]">
-                <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
-                AI 피드백
-              </div>
-              {isAiLoading ? (
-                <div className="flex items-center gap-2 py-2 text-[13px] text-neutral-400">
-                  <Loader2 className="h-4 w-4 animate-spin text-neutral-500" />
-                  생각을 분석하고 있습니다...
-                </div>
-              ) : (
-                <p className="text-[13px] text-neutral-700 leading-relaxed whitespace-pre-line">
-                  {aiReflection}
-                </p>
-              )}
-            </motion.div>
-          )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -477,10 +401,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
               filteredDiaries.map(diary => (
                 <div
                   key={diary.id}
-                  onClick={() => {
-                    setActiveDiary(diary);
-                    setAiReflection(''); // clear stale reflections
-                  }}
+                  onClick={() => setActiveDiary(diary)}
                   className="rounded-md border border-neutral-100 bg-white p-4 hover:border-neutral-500 transition-colors cursor-pointer space-y-2 group"
                 >
                   <div className="flex justify-between items-start gap-2">
@@ -564,18 +485,6 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
               </div>
 
               <div className="flex gap-2 justify-end pt-4 border-t border-neutral-100">
-                <button
-                  onClick={() => fetchAiFeedback(activeDiary.content)}
-                  disabled={isAiLoading}
-                  className="px-3 py-1.5 bg-transparent hover:bg-white border border-neutral-100 text-neutral-700 rounded text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  {isAiLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  AI 피드백
-                </button>
                 <button
                   onClick={() => setActiveDiary(null)}
                   className="px-4 py-1.5 text-[12px] font-medium bg-white text-black hover:bg-neutral-200 rounded cursor-pointer transition-colors"

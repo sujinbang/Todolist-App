@@ -26,12 +26,9 @@
 
 ### Backend & Infrastructure
 - **Firebase (Firestore & Auth):** 실시간 데이터베이스 및 안전한 사용자 인증
-- **Node.js & Express:** AI 피드백 처리를 위한 로컬 서버 구축
-- **Ollama (Qwen2.5):** 로컬 LLM을 활용한 일기 내용 분석 및 피드백 생성
 - **Capacitor:** 웹 기술을 네이티브 앱(Android/iOS)으로 변환 및 하드웨어 연동 준비
 
 ### DevOps & Tools
-- **Concurrently:** 클라이언트(Vite)와 AI 서버(Node.js) 동시 실행 관리
 - **ESLint & TypeScript Check:** 코드 품질 및 타입 안정성 유지
 
 ## 5. Setup & Usage
@@ -40,8 +37,6 @@
 - Node.js (v18 이상 권장)
 - npm 또는 yarn
 - Firebase 프로젝트 (설정 파일 필요)
-- [Ollama](https://ollama.com/) (AI 피드백 기능을 사용하려는 경우)
-  - `qwen2.5:7b` 모델 설치 필요: `ollama run qwen2.5:7b`
 
 ### 설치 및 로컬 실행
 1. 저장소를 클론합니다.
@@ -58,14 +53,11 @@
 3. Firebase 설정 파일을 구성합니다.
    - `firebase-applet-config.json` 파일을 루트 또는 지정된 경로에 배치합니다.
 
-4. 클라이언트와 AI 서버를 동시에 실행합니다.
+4. 클라이언트를 실행합니다.
    ```bash
-   npm run dev:all
+   npm run dev
    ```
    - 클라이언트: `http://localhost:3000`
-   - AI 서버: `http://localhost:3001`
-
-   *참고: AI 서버만 별도로 실행하려면 `npm run server`를 사용하세요.*
 
 ### 모바일 빌드 (Capacitor)
 1. 프로젝트를 빌드합니다.
