@@ -51,9 +51,12 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
     }
   };
 
-  // Stats calculation
-  const totalTodos = todos.length;
-  const completedTodos = todos.filter(t => t.completed).length;
+  // Stats calculation (오늘 날짜의 할 일만 필터링하여 홈 대시보드에 표시)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayTodos = todos.filter(t => t.dueDate === todayStr);
+
+  const totalTodos = todayTodos.length;
+  const completedTodos = todayTodos.filter(t => t.completed).length;
   const todoProgress = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
   const readingBooks = bLogs.filter(b => b.status !== 'completed');
@@ -180,12 +183,12 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
 
             {/* Mini Todolist Peek */}
             <div className="space-y-0.5 max-h-[180px] overflow-y-auto pr-1">
-              {todos.length === 0 ? (
+              {todayTodos.length === 0 ? (
                 <div className="text-center py-6 text-neutral-400 text-[12px]">
-                  새로운 할 일을 추가해보세요.
+                  오늘 등록된 할 일이 없습니다.
                 </div>
               ) : (
-                todos.slice(0, 3).map(todo => (
+                todayTodos.slice(0, 3).map(todo => (
                   <div 
                     key={todo.id} 
                     className="flex items-center justify-between p-3 rounded-[12px] bg-transparent hover:bg-[#faf9f7] text-[13px] transition-colors cursor-pointer group"
