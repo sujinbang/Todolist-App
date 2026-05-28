@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   CheckSquare, 
   BookOpen, 
@@ -13,7 +13,8 @@ import {
   ChevronRight,
   BookMarked,
   Edit2,
-  Camera
+  Camera,
+  Award
 } from 'lucide-react';
 import { Todo, BookLog, DiaryEntry } from '../types';
 
@@ -29,6 +30,7 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
   const [profilePhoto, setProfilePhoto] = React.useState<string | null>(() => localStorage.getItem('haru_profile_photo'));
   const [nickname, setNickname] = React.useState<string>(() => localStorage.getItem('haru_nickname') || user.name);
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
+  const [showCompletedModal, setShowCompletedModal] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -266,16 +268,76 @@ export default function Dashboard({ user, todos, bLogs, diaries, setTab }: Dashb
             </div>
 
             {/* Total book badge */}
-            <div className="mt-8 pt-5 border-t border-neutral-100 flex justify-between items-center text-[12px] text-neutral-500 font-light">
+            <div 
+              onClick={() => completedBooks.length > 0 && setShowCompletedModal(true)}
+              className={`mt-8 pt-5 border-t border-neutral-100 flex justify-between items-center text-[12px] text-neutral-500 font-light ${
+                completedBooks.length > 0 ? 'cursor-pointer hover:opacity-85 transition-all' : 'cursor-default'
+              }`}
+              title={completedBooks.length > 0 ? "완독한 도서 목록 보기" : undefined}
+            >
               <span className="flex items-center gap-1.5">
                 <BookMarked className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.5} />
                 완독한 도서
               </span>
-              <span className="font-medium text-neutral-700 bg-neutral-50 px-2.5 py-1 rounded-full">{completedBooks.length}권</span>
+              <span className={`font-medium text-neutral-700 bg-neutral-50 px-2.5 py-1 rounded-full transition-colors ${
+                completedBooks.length > 0 ? 'group-hover:bg-neutral-100' : ''
+              }`}>{completedBooks.length}권</span>
             </div>
           </div>
         </motion.div>
       </div>
+
+      {/* Completed Books Modal */}
+      <AnimatePresence>
+        {showCompletedModal && (
+          <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 pb-[80px] sm:pb-4 text-neutral-800">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[24px] max-w-md w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4"
+            >
+              <div className="flex justify-between items-center border-b border-neutral-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Award className="h-4.5 w-4.5 text-[#9fbb9f]" strokeWidth={2} />
+                  <h3 className="text-[14px] font-semibold text-neutral-800 tracking-wide">완독한 도서 목록</h3>
+                </div>
+                <span className="text-[11px] font-medium text-neutral-400">총 {completedBooks.length}권</span>
+              </div>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                {completedBooks.map(book => (
+                  <div 
+                    key={book.id} 
+                    className="p-3.5 rounded-[12px] bg-[#faf9f7] border border-neutral-100 flex flex-col gap-1 hover:border-neutral-200 transition-all text-left"
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 className="text-[13px] font-medium text-neutral-800 truncate max-w-[220px]" title={book.title}>
+                        {book.title}
+                      </h4>
+                      {book.endDate && (
+                        <span className="text-[9px] text-neutral-400 flex-none bg-white border border-neutral-100 px-1.5 py-0.2 rounded">
+                          {book.endDate} 완독
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-neutral-400 truncate max-w-[250px]">{book.author}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setShowCompletedModal(false)}
+                  className="h-9 px-5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-[12px] text-[12px] font-medium transition-colors cursor-pointer"
+                >
+                  닫기
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
