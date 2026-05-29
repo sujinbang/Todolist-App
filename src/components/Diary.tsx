@@ -19,6 +19,18 @@ interface DiaryProps {
   onDeleteDiary: (id: string) => void;
 }
 
+const DIARY_TEMPLATE = `1. 오늘 나는 어떤 시도를 했나요?
+- 
+
+2. 오늘 나는 무엇을 배웠나요?
+- 
+
+3. 그래서 나는 어제보다 좋아졌나요?
+- 
+
+4. 오늘 감사한 점은 무엇인가요?
+- `;
+
 export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps) {
   const [isLocked, setIsLocked] = React.useState(() => !!localStorage.getItem('haru_diary_pwd'));
   const [inputPwd, setInputPwd] = React.useState('');
@@ -28,7 +40,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
   const [showAddForm, setShowAddForm] = React.useState(false);
 
   const [title, setTitle] = React.useState('');
-  const [content, setContent] = React.useState('');
+  const [content, setContent] = React.useState(DIARY_TEMPLATE);
   const [mood, setMood] = React.useState<DiaryEntry['mood']>('peaceful');
   const [weather, setWeather] = React.useState<DiaryEntry['weather']>('sunny');
   const [date, setDate] = React.useState(() => {
@@ -118,7 +130,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
 
       // Reset fields
       setTitle('');
-      setContent('');
+      setContent(DIARY_TEMPLATE);
       setMood('peaceful');
       setWeather('sunny');
       setDate(() => {
@@ -310,8 +322,8 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
                 <textarea
                   value={content}
                   onChange={e => setContent(e.target.value)}
-                  placeholder="오늘 어떤 일들이 있었나요?"
-                  className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 placeholder:text-neutral-500 text-neutral-800 min-h-[140px] resize-none"
+                  placeholder={"1. 오늘 나는 어떤 시도를 했나요?\n2. 오늘 나는 무엇을 배웠나요?\n3. 그래서 나는 어제보다 좋아졌나요?\n4. 오늘 감사한 점은 무엇인가요?"}
+                  className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 placeholder:text-neutral-500 text-neutral-800 min-h-[220px] resize-none"
                   required
                 />
                 
