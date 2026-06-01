@@ -14,6 +14,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { DiaryEntry } from '../types';
+import { compressImage } from '../imageUtils';
 
 interface DiaryProps {
   diaries: DiaryEntry[];
@@ -62,11 +63,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
       if (f.size > 5 * 1024 * 1024) { alert(`${f.name}은 5MB를 초과합니다.`); return false; }
       return true;
     });
-    Promise.all(valid.map(f => new Promise<string>(res => {
-      const r = new FileReader();
-      r.onloadend = () => res(r.result as string);
-      r.readAsDataURL(f);
-    }))).then(results => setImageUrls(prev => [...prev, ...results]));
+    Promise.all(valid.map(f => compressImage(f))).then(results => setImageUrls(prev => [...prev, ...results]));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 

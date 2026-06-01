@@ -17,11 +17,12 @@ import {
   X
 } from 'lucide-react';
 import { BookLog } from '../types';
+import { compressImage } from '../imageUtils';
 
 interface ReadingLogProps {
   bLogs: BookLog[];
   onAddBook: (book: Omit<BookLog, 'id'>) => void;
-  onUpdateProgress: (id: string, currentPage: number, status: BookLog['status'], review?: string) => void;
+  onUpdateProgress: (id: string, currentPage: number, status: BookLog['status'], review?: string, imageUrls?: string[]) => void;
   onDeleteBook: (id: string) => void;
 }
 
@@ -39,6 +40,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
   const [showAddForm, setShowAddForm] = React.useState(false);
   const [selectedBook, setSelectedBook] = React.useState<BookLog | null>(null);
   const [viewingReviewBook, setViewingReviewBook] = React.useState<BookLog | null>(null);
+  const [viewImgIdx, setViewImgIdx] = React.useState(0);
 
   // Add Book inputs
   const [title, setTitle] = React.useState('');
@@ -75,11 +77,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
       if (f.size > 5 * 1024 * 1024) { alert(`${f.name}은 5MB를 초과합니다.`); return false; }
       return true;
     });
-    Promise.all(valid.map(f => new Promise<string>(res => {
-      const r = new FileReader();
-      r.onloadend = () => res(r.result as string);
-      r.readAsDataURL(f);
-    }))).then(results => setter(prev => [...prev, ...results]));
+    Promise.all(valid.map(f => compressImage(f))).then(results => setter(prev => [...prev, ...results]));
     if (ref.current) ref.current.value = '';
   };
 
@@ -142,7 +140,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
       finalStatus = 'reading';
     }
 
-    onUpdateProgress(selectedBook.id, finalPage, finalStatus, editReview.trim());
+    onUpdateProgress(selectedBook.id, finalPage, finalStatus, editReview.trim(), editImageUrls.length > 0 ? editImageUrls : []);
     setSelectedBook(null);
   };
 
@@ -433,7 +431,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
 
                     {book.review && (
                       <div 
-                        onClick={() => setViewingReviewBook(book)}
+                        onClick={() => { setViewingReviewBook(book); setViewImgIdx(0); }}
                         className="mt-3 p-2.5 rounded-[12px] bg-neutral-50 hover:bg-neutral-100/70 text-[11px] text-neutral-500 line-clamp-2 cursor-pointer transition-colors border border-transparent hover:border-neutral-100"
                         title="기록 전체 보기"
                       >
@@ -634,11 +632,52 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                 </div>
               )}
 
-              <div className="border-t border-neutral-100 pt-4">
-                <label className="block text-[11px] font-semibold text-neutral-400 tracking-wide uppercase mb-2">남긴 기록/메모</label>
-                <div className="bg-neutral-50/50 border border-neutral-100 rounded-[16px] p-4 text-[13px] text-neutral-600 leading-relaxed font-light whitespace-pre-wrap max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {viewingReviewBook.review}
-                </div>
+              <div className="border-t border-neutral-100 pt-4 space-y-4">
+                {(() => {
+                  const imgs = getBookImages(viewingReviewBook);
+                  if (imgs.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="relative w-full rounded-md border border-neutral-100 overflow-hidden bg-neutral-50 flex items-center justify-center" style={{minHeight:'160px', maxHeight:'260px'}}>
+                        <img src={imgs[viewImgIdx]} alt="" className="max-w-full max-h-[260px] object-contain" />
+                        {imgs.length > 1 && (
+                          <>
+                            <button onClick={() => setViewImgIdx(i => Math.max(0, i-1))} disabled={viewImgIdx===0}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1 shadow border border-neutral-100 disabled:opacity-30 cursor-pointer transition-all">
+                              <ChevronLeft className="h-4 w-4 text-neutral-700" />
+                            </button>
+                            <button onClick={() => setViewImgIdx(i => Math.min(imgs.length-1, i+1))} disabled={viewImgIdx===imgs.length-1}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1 shadow border border-neutral-100 disabled:opacity-30 cursor-pointer transition-all">
+                              <ChevronRight className="h-4 w-4 text-neutral-700" />
+                            </button>
+                            <span className="absolute bottom-2 right-2 bg-black/40 text-white text-[10px] px-1.5 py-0.5 rounded-full">{viewImgIdx+1} / {imgs.length}</span>
+                          </>
+                        )}
+                      </div>
+                      {imgs.length > 1 && (
+                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                          {imgs.map((url, idx) => (
+                            <button key={idx} onClick={() => setViewImgIdx(idx)}
+                              className={`shrink-0 h-12 w-12 rounded border-2 overflow-hidden transition-all cursor-pointer ${
+                                idx === viewImgIdx ? 'border-neutral-600' : 'border-transparent opacity-60 hover:opacity-100'
+                              }`}>
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {viewingReviewBook.review && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-neutral-400 tracking-wide uppercase mb-2">남긴 기록/메모</label>
+                    <div className="bg-neutral-50/50 border border-neutral-100 rounded-[16px] p-4 text-[13px] text-neutral-600 leading-relaxed font-light whitespace-pre-wrap max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {viewingReviewBook.review}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end pt-2">
