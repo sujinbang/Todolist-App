@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc, query, where, serverTimestamp, deleteField } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { Todo, BookLog, DiaryEntry, Routine } from './types';
 
@@ -100,13 +100,20 @@ export function useFirebase() {
     const id = `b_${Date.now()}`;
     const docRef = doc(db, 'users', user.uid, 'books', id);
     const bookData: any = { ...newBook, userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    Object.keys(bookData).forEach(key => bookData[key] === undefined && delete bookData[key]);
     if (!bookData.imageUrls || bookData.imageUrls.length === 0) delete bookData.imageUrls;
     await setDoc(docRef, bookData).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
   };
-  const handleUpdateBookProgress = async (id: string, currentPage: number, status: BookLog['status'], review?: string, existing?: Partial<BookLog>) => {
+  const handleUpdateBookProgress = async (id: string, currentPage: number, status: BookLog['status'], review?: string, imageUrls?: string[]) => {
     if (!user) return;
     const docRef = doc(db, 'users', user.uid, 'books', id);
-    const updates: any = { currentPage, status, review, updatedAt: serverTimestamp() };
+    const updates: any = { currentPage, status, updatedAt: serverTimestamp() };
+    if (review !== undefined) updates.review = review;
+    if (imageUrls && imageUrls.length > 0) {
+      updates.imageUrls = imageUrls;
+    } else if (imageUrls && imageUrls.length === 0) {
+      updates.imageUrls = deleteField();
+    }
     if (status === 'completed') updates.endDate = (() => {
       const d = new Date();
       return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
