@@ -99,7 +99,9 @@ export function useFirebase() {
     if (!user) return;
     const id = `b_${Date.now()}`;
     const docRef = doc(db, 'users', user.uid, 'books', id);
-    await setDoc(docRef, { ...newBook, userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
+    const bookData: any = { ...newBook, userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    if (!bookData.imageUrls || bookData.imageUrls.length === 0) delete bookData.imageUrls;
+    await setDoc(docRef, bookData).catch(e => handleFirestoreError(e, OperationType.CREATE, docRef.path));
   };
   const handleUpdateBookProgress = async (id: string, currentPage: number, status: BookLog['status'], review?: string, existing?: Partial<BookLog>) => {
     if (!user) return;
@@ -137,11 +139,13 @@ export function useFirebase() {
       updatedAt: serverTimestamp()
     };
 
-    // weather와 imageUrl은 값이 있을 때만 추가
+    // weather와 imageUrls/imageUrl은 값이 있을 때만 추가
     if (newDiary.weather !== undefined && newDiary.weather !== null) {
       diaryData.weather = newDiary.weather;
     }
-    if (newDiary.imageUrl !== undefined && newDiary.imageUrl !== null && newDiary.imageUrl.trim() !== '') {
+    if (newDiary.imageUrls && newDiary.imageUrls.length > 0) {
+      diaryData.imageUrls = newDiary.imageUrls;
+    } else if (newDiary.imageUrl !== undefined && newDiary.imageUrl !== null && newDiary.imageUrl.trim() !== '') {
       diaryData.imageUrl = newDiary.imageUrl;
     }
 

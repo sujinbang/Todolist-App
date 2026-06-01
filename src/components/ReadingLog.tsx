@@ -8,10 +8,13 @@ import {
   Star, 
   Book, 
   ChevronRight, 
+  ChevronLeft,
   Edit3,
   Check,
   Search,
-  BookMarked
+  BookMarked,
+  ImagePlus,
+  X
 } from 'lucide-react';
 import { BookLog } from '../types';
 
@@ -44,6 +47,8 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
   const [currentPage, setCurrentPage] = React.useState(0);
   const [status, setStatus] = React.useState<BookLog['status']>('reading');
   const [review, setReview] = React.useState('');
+  const [addImageUrls, setAddImageUrls] = React.useState<string[]>([]);
+  const addFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filterType, setFilterType] = React.useState<'All' | 'reading' | 'completed' | 'wishlist'>('All');
@@ -51,6 +56,38 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
   // Editing Book inputs (for progress modal)
   const [editCurrentPage, setEditCurrentPage] = React.useState(0);
   const [editReview, setEditReview] = React.useState('');
+  const [editImageUrls, setEditImageUrls] = React.useState<string[]>([]);
+  const [editImgIdx, setEditImgIdx] = React.useState(0);
+  const editFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // 공통 이미지 업로드 함수
+  const uploadImages = (
+    files: FileList | null,
+    current: string[],
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    ref: React.RefObject<HTMLInputElement>
+  ) => {
+    if (!files) return;
+    const arr: File[] = Array.from(files);
+    const remaining = 10 - current.length;
+    if (remaining <= 0) { alert('사진은 최대 10장까지 추가할 수 있습니다.'); return; }
+    const valid = arr.slice(0, remaining).filter(f => {
+      if (f.size > 5 * 1024 * 1024) { alert(`${f.name}은 5MB를 초과합니다.`); return false; }
+      return true;
+    });
+    Promise.all(valid.map(f => new Promise<string>(res => {
+      const r = new FileReader();
+      r.onloadend = () => res(r.result as string);
+      r.readAsDataURL(f);
+    }))).then(results => setter(prev => [...prev, ...results]));
+    if (ref.current) ref.current.value = '';
+  };
+
+  // 책 이미지 배열 반환 (하위 호환)
+  const getBookImages = (b: BookLog): string[] => {
+    if (b.imageUrls && b.imageUrls.length > 0) return b.imageUrls;
+    return [];
+  };
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +107,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
         return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       })(),
       color: randomColor,
+      imageUrls: addImageUrls.length > 0 ? addImageUrls : undefined,
     });
 
     // Reset fields
@@ -79,6 +117,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
     setCurrentPage(0);
     setStatus('reading');
     setReview('');
+    setAddImageUrls([]);
     setShowAddForm(false);
   };
 
@@ -86,6 +125,8 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
     setSelectedBook(book);
     setEditCurrentPage(book.currentPage);
     setEditReview(book.review || '');
+    setEditImageUrls(book.imageUrls || []);
+    setEditImgIdx(0);
   };
 
   const handleSaveEdit = () => {
@@ -214,7 +255,34 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                     className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800 placeholder:text-neutral-500 min-h-[85px] resize-none"
                   />
                 </div>
-                
+
+                {/* 사진 추가 */}
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1.5">사진</label>
+                  <input type="file" accept="image/*" multiple className="hidden" ref={addFileInputRef}
+                    onChange={e => uploadImages(e.target.files, addImageUrls, setAddImageUrls, addFileInputRef)} />
+                  {addImageUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {addImageUrls.map((url, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={url} alt={`사진 ${idx+1}`} className="h-14 w-14 object-cover rounded border border-neutral-200" />
+                          <button type="button" onClick={() => setAddImageUrls(p => p.filter((_,i) => i!==idx))}
+                            className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow border border-neutral-200 text-neutral-500 hover:text-red-500 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {addImageUrls.length < 10 && (
+                    <button type="button" onClick={() => addFileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 rounded border border-neutral-100 transition-colors cursor-pointer w-fit">
+                      <ImagePlus className="h-3 w-3" />
+                      사진 추가 {addImageUrls.length > 0 && <span className="text-neutral-400">({addImageUrls.length}/10)</span>}
+                    </button>
+                  )}
+                </div>
+
                 <div className="flex gap-2 mt-4 md:mt-0 justify-end">
                   <button
                     type="button"
@@ -319,6 +387,23 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                           {book.author}
                         </p>
 
+                        {/* 사진 썸네일 */}
+                        {(() => {
+                          const imgs = getBookImages(book);
+                          return imgs.length > 0 ? (
+                            <div className="mb-2 flex gap-1.5 overflow-x-auto">
+                              {imgs.slice(0, 3).map((url, idx) => (
+                                <div key={idx} className="relative shrink-0">
+                                  <img src={url} alt="" className="h-14 w-14 object-cover rounded border border-neutral-100" />
+                                  {idx === 2 && imgs.length > 3 && (
+                                    <div className="absolute inset-0 bg-black/40 rounded flex items-center justify-center text-white text-[10px] font-bold">+{imgs.length-3}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
+
                         {/* Badges */}
                         <div className="flex flex-wrap gap-1.5 mb-3">
                           <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
@@ -388,7 +473,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[20px] max-w-sm w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4"
+              className="bg-white rounded-[20px] max-w-sm w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4 max-h-[85vh] overflow-y-auto"
             >
               <div>
                 <span className="text-[11px] font-medium text-neutral-400 block mb-0.5">상태 기록</span>
@@ -439,6 +524,54 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                     placeholder="짧은 코멘트를 남겨주세요."
                     className="w-full px-3 py-2 bg-white border border-neutral-100 rounded text-[13px] min-h-[80px] resize-none focus:outline-hidden placeholder:text-neutral-500 text-neutral-800"
                   />
+                </div>
+
+                {/* 사진 추가/수정 */}
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-400 mb-1.5">사진</label>
+                  <input type="file" accept="image/*" multiple className="hidden" ref={editFileInputRef}
+                    onChange={e => uploadImages(e.target.files, editImageUrls, setEditImageUrls, editFileInputRef)} />
+                  {editImageUrls.length > 0 && (
+                    <div className="space-y-2 mb-2">
+                      <div className="relative w-full rounded-md border border-neutral-100 overflow-hidden bg-neutral-50 flex items-center justify-center" style={{minHeight:'120px', maxHeight:'180px'}}>
+                        <img src={editImageUrls[editImgIdx]} alt="" className="max-w-full max-h-[180px] object-contain" />
+                        {editImageUrls.length > 1 && (
+                          <>
+                            <button type="button" onClick={() => setEditImgIdx(i => Math.max(0,i-1))} disabled={editImgIdx===0}
+                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-0.5 shadow border border-neutral-100 disabled:opacity-30 cursor-pointer">
+                              <ChevronLeft className="h-3 w-3 text-neutral-700" />
+                            </button>
+                            <button type="button" onClick={() => setEditImgIdx(i => Math.min(editImageUrls.length-1,i+1))} disabled={editImgIdx===editImageUrls.length-1}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-0.5 shadow border border-neutral-100 disabled:opacity-30 cursor-pointer">
+                              <ChevronRight className="h-3 w-3 text-neutral-700" />
+                            </button>
+                            <span className="absolute bottom-1 right-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded-full">{editImgIdx+1}/{editImageUrls.length}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5 overflow-x-auto pb-1">
+                        {editImageUrls.map((url, idx) => (
+                          <div key={idx} className="relative shrink-0 group">
+                            <button type="button" onClick={() => setEditImgIdx(idx)}
+                              className={`h-10 w-10 rounded border-2 overflow-hidden cursor-pointer ${idx===editImgIdx?'border-neutral-600':'border-transparent opacity-60 hover:opacity-100'}`}>
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                            </button>
+                            <button type="button" onClick={() => { setEditImageUrls(p=>p.filter((_,i)=>i!==idx)); setEditImgIdx(i=>Math.max(0,Math.min(i,editImageUrls.length-2))); }}
+                              className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow border border-neutral-200 text-neutral-500 hover:text-red-500 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X className="h-2 w-2" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {editImageUrls.length < 10 && (
+                    <button type="button" onClick={() => editFileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 rounded border border-neutral-100 transition-colors cursor-pointer w-fit">
+                      <ImagePlus className="h-3 w-3" />
+                      사진 추가 {editImageUrls.length > 0 && <span className="text-neutral-400">({editImageUrls.length}/10)</span>}
+                    </button>
+                  )}
                 </div>
               </div>
 

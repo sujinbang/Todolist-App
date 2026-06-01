@@ -9,7 +9,9 @@ import {
   Unlock,
   Key,
   ImagePlus,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { DiaryEntry } from '../types';
 
@@ -47,35 +49,42 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
     const d = new Date();
     return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
   });
-  const [imageUrl, setImageUrl] = React.useState<string | undefined>(undefined);
-  
+  const [imageUrls, setImageUrls] = React.useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('이미지 크기는 5MB 이하여야 합니다.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    const files: File[] = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const remaining = 10 - imageUrls.length;
+    if (remaining <= 0) { alert('사진은 최대 10장까지 추가할 수 있습니다.'); return; }
+    const toProcess = files.slice(0, remaining);
+    const valid = toProcess.filter(f => {
+      if (f.size > 5 * 1024 * 1024) { alert(`${f.name}은 5MB를 초과합니다.`); return false; }
+      return true;
+    });
+    Promise.all(valid.map(f => new Promise<string>(res => {
+      const r = new FileReader();
+      r.onloadend = () => res(r.result as string);
+      r.readAsDataURL(f);
+    }))).then(results => setImageUrls(prev => [...prev, ...results]));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleRemoveImage = () => {
-    setImageUrl(undefined);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+  const handleRemoveImage = (idx: number) => {
+    setImageUrls(prev => prev.filter((_, i) => i !== idx));
   };
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedMoodFilter, setSelectedMoodFilter] = React.useState<string>('All');
   const [activeDiary, setActiveDiary] = React.useState<DiaryEntry | null>(null);
+  const [activeImgIdx, setActiveImgIdx] = React.useState(0);
+
+  // 일기의 이미지 배열 반환 (기존 imageUrl 하위 호환)
+  const getDiaryImages = (d: DiaryEntry): string[] => {
+    if (d.imageUrls && d.imageUrls.length > 0) return d.imageUrls;
+    if (d.imageUrl) return [d.imageUrl];
+    return [];
+  };
 
   const moodIcons: Record<DiaryEntry['mood'], string> = {
     happy: '✨',
@@ -110,7 +119,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
       return;
     }
 
-    const newDiary = {
+    const newDiary: Omit<DiaryEntry, 'id'> = {
       title: title.trim(),
       content: content.trim(),
       mood,
@@ -119,7 +128,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
         const d = new Date();
         return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       })(),
-      imageUrl,
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     };
 
     console.log('일기 추가 시도:', newDiary);
@@ -137,7 +146,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
         const d = new Date();
         return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       });
-      setImageUrl(undefined);
+      setImageUrls([]);
       setShowAddForm(false);
     } catch (error) {
       console.error('일기 추가 중 에러:', error);
@@ -327,27 +336,33 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
                   required
                 />
                 
-                {/* Image Upload Area */}
+                {/* Multi-Image Upload Area */}
                 <div className="mt-3">
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
                     ref={fileInputRef}
                     onChange={handleImageUpload}
                   />
-                  {imageUrl ? (
-                    <div className="relative inline-block">
-                      <img src={imageUrl} alt="Diary attachment" className="h-20 w-auto object-cover rounded-md border border-neutral-200" />
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-neutral-200 text-neutral-500 hover:text-red-500 cursor-pointer"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                  {imageUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {imageUrls.map((url, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={url} alt={`사진 ${idx+1}`} className="h-20 w-20 object-cover rounded-md border border-neutral-200" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="absolute -top-1.5 -right-1.5 bg-white rounded-full p-0.5 shadow border border-neutral-200 text-neutral-500 hover:text-red-500 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
+                  )}
+                  {imageUrls.length < 10 && (
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
@@ -355,6 +370,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
                     >
                       <ImagePlus className="h-3.5 w-3.5" />
                       사진 추가
+                      {imageUrls.length > 0 && <span className="text-neutral-400">({imageUrls.length}/10)</span>}
                     </button>
                   )}
                 </div>
@@ -422,7 +438,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
               filteredDiaries.map(diary => (
                 <div
                   key={diary.id}
-                  onClick={() => setActiveDiary(diary)}
+                  onClick={() => { setActiveDiary(diary); setActiveImgIdx(0); }}
                   className="rounded-md border border-neutral-100 bg-white p-4 hover:border-neutral-500 transition-colors cursor-pointer space-y-2 group"
                 >
                   <div className="flex justify-between items-start gap-2">
@@ -442,19 +458,29 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
                     </button>
                   </div>
 
-                  <div>
-                    <h4 className="text-[14px] font-semibold text-neutral-800 group-hover:text-neutral-800 transition-colors">
-                      {diary.title}
-                    </h4>
-                    {diary.imageUrl && (
-                      <div className="mt-2 mb-1 w-full h-32 overflow-hidden rounded-md border border-neutral-100">
-                        <img src={diary.imageUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <p className="text-[13px] text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
-                      {diary.content}
-                    </p>
-                  </div>
+                    <div>
+                      <h4 className="text-[14px] font-semibold text-neutral-800 group-hover:text-neutral-800 transition-colors">
+                        {diary.title}
+                      </h4>
+                      {(() => {
+                        const imgs = getDiaryImages(diary);
+                        return imgs.length > 0 ? (
+                          <div className="mt-2 mb-1 flex gap-1.5 overflow-x-auto">
+                            {imgs.slice(0, 4).map((url, idx) => (
+                              <div key={idx} className="relative shrink-0">
+                                <img src={url} alt="" className="h-16 w-16 object-cover rounded border border-neutral-100" />
+                                {idx === 3 && imgs.length > 4 && (
+                                  <div className="absolute inset-0 bg-black/40 rounded flex items-center justify-center text-white text-[11px] font-semibold">+{imgs.length - 4}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                      <p className="text-[13px] text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
+                        {diary.content}
+                      </p>
+                    </div>
                 </div>
               ))
             )}
@@ -470,7 +496,7 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[20px] max-w-lg w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4"
+              className="bg-white rounded-[20px] max-w-lg w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4 max-h-[85vh] overflow-y-auto"
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
@@ -495,11 +521,42 @@ export default function Diary({ diaries, onAddDiary, onDeleteDiary }: DiaryProps
 
               <div className="border-t border-neutral-100 pt-4 space-y-3">
                 <h3 className="text-[15px] font-semibold text-neutral-800">{activeDiary.title}</h3>
-                {activeDiary.imageUrl && (
-                  <div className="w-full max-h-64 overflow-hidden rounded-md border border-neutral-100 flex items-center justify-center bg-neutral-50">
-                    <img src={activeDiary.imageUrl} alt="" className="max-w-full max-h-64 object-contain" />
-                  </div>
-                )}
+                {(() => {
+                  const imgs = getDiaryImages(activeDiary);
+                  if (imgs.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="relative w-full rounded-md border border-neutral-100 overflow-hidden bg-neutral-50 flex items-center justify-center" style={{minHeight:'160px', maxHeight:'260px'}}>
+                        <img src={imgs[activeImgIdx]} alt="" className="max-w-full max-h-[260px] object-contain" />
+                        {imgs.length > 1 && (
+                          <>
+                            <button onClick={() => setActiveImgIdx(i => Math.max(0, i-1))} disabled={activeImgIdx===0}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1 shadow border border-neutral-100 disabled:opacity-30 cursor-pointer transition-all">
+                              <ChevronLeft className="h-4 w-4 text-neutral-700" />
+                            </button>
+                            <button onClick={() => setActiveImgIdx(i => Math.min(imgs.length-1, i+1))} disabled={activeImgIdx===imgs.length-1}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1 shadow border border-neutral-100 disabled:opacity-30 cursor-pointer transition-all">
+                              <ChevronRight className="h-4 w-4 text-neutral-700" />
+                            </button>
+                            <span className="absolute bottom-2 right-2 bg-black/40 text-white text-[10px] px-1.5 py-0.5 rounded-full">{activeImgIdx+1} / {imgs.length}</span>
+                          </>
+                        )}
+                      </div>
+                      {imgs.length > 1 && (
+                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                          {imgs.map((url, idx) => (
+                            <button key={idx} onClick={() => setActiveImgIdx(idx)}
+                              className={`shrink-0 h-12 w-12 rounded border-2 overflow-hidden transition-all cursor-pointer ${
+                                idx === activeImgIdx ? 'border-neutral-600' : 'border-transparent opacity-60 hover:opacity-100'
+                              }`}>
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <p className="text-[13px] text-neutral-700 leading-relaxed whitespace-pre-wrap py-2 font-medium bg-white p-4 rounded border border-neutral-100">
                   {activeDiary.content}
                 </p>

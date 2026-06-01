@@ -32,6 +32,7 @@ export interface BookLog {
   endDate?: string;
   review?: string;
   color: string; // Tailwind hex or class name for minimalist book jackets
+  imageUrls?: string[]; // 책 사진 여러 장
 }
 
 export interface DiaryEntry {
@@ -41,5 +42,6 @@ export interface DiaryEntry {
   content: string;
   mood: 'happy' | 'peaceful' | 'neutral' | 'sad' | 'tired' | 'stressed';
   weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy';
-  imageUrl?: string;
+  imageUrl?: string;    // 하위 호환용 (기존 데이터)
+  imageUrls?: string[]; // 여러 장 사진
 }
