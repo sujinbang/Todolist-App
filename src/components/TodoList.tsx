@@ -12,9 +12,12 @@ import {
   Circle,
   X,
   RotateCcw,
-  AlertCircle
+  AlertCircle,
+  ImagePlus,
+  Pencil
 } from 'lucide-react';
 import { Todo, Routine } from '../types';
+import { compressImage } from '../imageUtils';
 
 interface TodoListProps {
   todos: Todo[];
@@ -22,6 +25,7 @@ interface TodoListProps {
   categories: string[];
   onAddTodo: (todo: Omit<Todo, 'id'> & { completed?: boolean }) => void;
   onToggleTodo: (id: string) => void;
+  onUpdateTodo: (id: string, updates: Partial<Todo>) => void;
   onDeleteTodo: (id: string) => void;
   onAddCategory: (cat: string) => void;
   onDeleteCategory?: (cat: string) => void;
@@ -91,7 +95,7 @@ function isRoutineMatchingDate(routine: Routine, dateStr: string): boolean {
   }
 }
 
-export default function TodoList({ todos, routines, categories, onAddTodo, onToggleTodo, onDeleteTodo, onAddCategory, onDeleteCategory, setTab }: TodoListProps) {
+export default function TodoList({ todos, routines, categories, onAddTodo, onToggleTodo, onUpdateTodo, onDeleteTodo, onAddCategory, onDeleteCategory, setTab }: TodoListProps) {
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showYearModal, setShowYearModal] = React.useState(false);
   const [addMode, setAddMode] = React.useState<'todo' | 'category'>('todo');
@@ -104,6 +108,63 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
     const d = new Date();
     return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
   });
+  const [imageUrls, setImageUrls] = React.useState<string[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(f => f.type.startsWith('image/'));
+    const compressedPromises = validFiles.map(f => compressImage(f));
+    const compressedImages = await Promise.all(compressedPromises);
+    setImageUrls(prev => [...prev, ...compressedImages]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Edit Todo Form
+  const [editingTodoId, setEditingTodoId] = React.useState<string | null>(null);
+  const [editText, setEditText] = React.useState('');
+  const [editCategory, setEditCategory] = React.useState<string>('');
+  const [editPriority, setEditPriority] = React.useState<Todo['priority']>('medium');
+  const [editDueDate, setEditDueDate] = React.useState('');
+  const [editImageUrls, setEditImageUrls] = React.useState<string[]>([]);
+  const editFileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const [viewingImageUrl, setViewingImageUrl] = React.useState<string | null>(null);
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(f => f.type.startsWith('image/'));
+    const compressedPromises = validFiles.map(f => compressImage(f));
+    const compressedImages = await Promise.all(compressedPromises);
+    setEditImageUrls(prev => [...prev, ...compressedImages]);
+    if (editFileInputRef.current) editFileInputRef.current.value = '';
+  };
+
+  const openEditModal = (todo: Todo) => {
+    setEditingTodoId(todo.id);
+    setEditText(todo.text);
+    setEditCategory(todo.category || (categories[0] || ''));
+    setEditPriority(todo.priority || 'medium');
+    setEditDueDate(todo.dueDate);
+    const initialImages = todo.imageUrls ? [...todo.imageUrls] : (todo.imageUrl ? [todo.imageUrl] : []);
+    setEditImageUrls(initialImages);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTodoId || !editText.trim()) return;
+    onUpdateTodo(editingTodoId, {
+      text: editText.trim(),
+      category: editCategory,
+      priority: editPriority,
+      dueDate: editDueDate,
+      imageUrls: editImageUrls
+    });
+    setEditingTodoId(null);
+  };
+
 
   // Category Form
   const [newCategoryName, setNewCategoryName] = React.useState('');
@@ -125,9 +186,11 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
         text: newText.trim(),
         category,
         priority,
-        dueDate
+        dueDate,
+        imageUrls
       });
       setNewText('');
+      setImageUrls([]);
       setShowAddModal(false);
     } else if (addMode === 'category') {
       if (!newCategoryName.trim()) return;
@@ -420,16 +483,33 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
                             {todo.category}
                           </span>
                         </div>
+                        {(todo.imageUrls && todo.imageUrls.length > 0) || todo.imageUrl ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {(todo.imageUrls || (todo.imageUrl ? [todo.imageUrl] : [])).map((url, idx) => (
+                              <div key={idx} className="cursor-pointer" onClick={() => setViewingImageUrl(url)}>
+                                <img src={url} alt={`첨부 이미지 ${idx + 1}`} className="h-20 w-20 object-cover rounded border border-neutral-100 hover:opacity-90 transition-opacity" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     
                     {!((todo as any).isVirtual) && (
-                      <button
-                        onClick={() => onDeleteTodo(todo.id)}
-                        className="mt-3 sm:mt-0 p-1 text-neutral-500 hover:text-red-400 hover:bg-neutral-50 rounded opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer shrink-0 self-end sm:self-center"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="mt-3 sm:mt-0 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all shrink-0 self-end sm:self-center">
+                        <button
+                          onClick={() => openEditModal(todo)}
+                          className="p-1 text-neutral-500 hover:text-blue-500 hover:bg-neutral-50 rounded cursor-pointer"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteTodo(todo.id)}
+                          className="p-1 text-neutral-500 hover:text-red-400 hover:bg-neutral-50 rounded cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     )}
                   </motion.div>
                 ))}
@@ -577,6 +657,34 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
                           ))}
                         </div>
                       </div>
+                      <div>
+                        <label className="block text-[12px] font-medium text-neutral-400 mb-1">사진 첨부 (선택)</label>
+                        <div className="flex flex-col gap-2">
+                          <input type="file" accept="image/*" multiple className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                          <div className="flex flex-wrap gap-2">
+                            {imageUrls.map((url, idx) => (
+                              <div key={idx} className="relative group rounded border border-neutral-100 overflow-hidden" style={{ width: '60px', height: '60px' }}>
+                                <img src={url} alt="첨부 이미지" className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
+                                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="h-4 w-4 text-white" />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-[60px] h-[60px] flex flex-col items-center justify-center bg-neutral-50 rounded border border-neutral-100 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                            >
+                              <ImagePlus className="h-4 w-4 mb-1" />
+                              <span className="text-[10px]">사진</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </motion.div>
                   )}
 
@@ -630,6 +738,159 @@ export default function TodoList({ todos, routines, categories, onAddTodo, onTog
                   </div>
                 </form>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Todo Modal */}
+      <AnimatePresence>
+        {editingTodoId && (
+          <div className="fixed inset-0 z-[60] bg-black/60 flex justify-center items-center p-4 pb-[80px] sm:pb-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md bg-white border border-neutral-100 rounded-[20px] shadow-sm overflow-hidden relative"
+            >
+              <div className="flex justify-between items-center px-4 py-3 border-b border-neutral-100 bg-neutral-50">
+                <span className="px-3 py-1.5 text-[13px] font-medium text-neutral-800">할 일 수정</span>
+                <button 
+                  onClick={() => setEditingTodoId(null)}
+                  className="p-1 text-neutral-500 hover:text-neutral-800 rounded cursor-pointer transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-5">
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                    <div>
+                      <label className="block text-[12px] font-medium text-neutral-400 mb-1">내용</label>
+                      <input
+                        type="text"
+                        value={editText}
+                        onChange={e => setEditText(e.target.value)}
+                        placeholder="할 일 내용"
+                        className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800 placeholder:text-neutral-500"
+                        autoFocus
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[12px] font-medium text-neutral-400 mb-1">카테고리</label>
+                        <select
+                          value={editCategory}
+                          onChange={e => setEditCategory(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800"
+                        >
+                          {categories.map(cat => (
+                            <option key={cat} value={cat} className="bg-white text-neutral-800">{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[12px] font-medium text-neutral-400 mb-1">날짜</label>
+                        <input
+                          type="date"
+                          value={editDueDate}
+                          onChange={e => setEditDueDate(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] bg-white border border-neutral-100 rounded focus:outline-hidden focus:border-neutral-500 text-neutral-800"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-medium text-neutral-400 mb-1">우선순위</label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'high', label: '높음' },
+                          { value: 'medium', label: '보통' },
+                          { value: 'low', label: '낮음' }
+                        ].map(p => (
+                          <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => setEditPriority(p.value as any)}
+                            className={`flex-1 py-1.5 rounded text-[12px] font-medium transition-all border cursor-pointer ${
+                              editPriority === p.value 
+                                ? `bg-neutral-50 border-neutral-500 text-neutral-800` 
+                                : 'bg-white border-neutral-100 text-neutral-500 hover:text-neutral-800'
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-medium text-neutral-400 mb-1">사진 첨부 (선택)</label>
+                      <div className="flex flex-col gap-2">
+                        <input type="file" accept="image/*" multiple className="hidden" ref={editFileInputRef} onChange={handleEditImageUpload} />
+                        <div className="flex flex-wrap gap-2">
+                          {editImageUrls.map((url, idx) => (
+                            <div key={idx} className="relative group rounded border border-neutral-100 overflow-hidden" style={{ width: '60px', height: '60px' }}>
+                              <img src={url} alt="첨부 이미지" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setEditImageUrls(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-4 w-4 text-white" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => editFileInputRef.current?.click()}
+                            className="w-[60px] h-[60px] flex flex-col items-center justify-center bg-neutral-50 rounded border border-neutral-100 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                          >
+                            <ImagePlus className="h-4 w-4 mb-1" />
+                            <span className="text-[10px]">사진</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full py-2 bg-white text-black rounded text-[13px] font-medium hover:bg-neutral-200 transition-colors cursor-pointer"
+                    >
+                      수정 완료
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Image Viewer Modal */}
+      <AnimatePresence>
+        {viewingImageUrl && (
+          <div className="fixed inset-0 z-[70] bg-black/90 flex justify-center items-center p-4 cursor-pointer" onClick={() => setViewingImageUrl(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative max-w-full max-h-full flex justify-center items-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setViewingImageUrl(null)}
+                className="absolute -top-10 right-0 p-2 text-white/70 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              <img 
+                src={viewingImageUrl} 
+                alt="원본 이미지" 
+                className="max-w-full max-h-[85vh] object-contain rounded-md"
+              />
             </motion.div>
           </div>
         )}

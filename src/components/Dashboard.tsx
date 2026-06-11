@@ -1,344 +1,179 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  CheckSquare, 
-  BookOpen, 
-  Book, 
-  Calendar, 
-  PenTool, 
-  TrendingUp, 
-  Smile, 
-  ListTodo, 
-  Heart,
-  ChevronRight,
-  BookMarked,
-  Edit2,
-  Camera,
-  Award
-} from 'lucide-react';
-import { Todo, BookLog, DiaryEntry } from '../types';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { Utensils, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Todo, BookLog, DiaryEntry, MealPlan } from '../types';
 
 interface DashboardProps {
   user: { email: string; name: string };
   todos: Todo[];
   bLogs: BookLog[];
   diaries: DiaryEntry[];
-  setTab: (tab: 'dashboard' | 'todo' | 'reading' | 'diary') => void;
+  mealPlans?: MealPlan[];
+  handleUpdateMealPlan?: (id: string, updates: Partial<MealPlan>) => void;
+  setTab: (tab: 'dashboard' | 'todo' | 'reading' | 'diary' | 'routine') => void;
 }
 
-export default function Dashboard({ user, todos, bLogs, diaries, setTab }: DashboardProps) {
-  const [profilePhoto, setProfilePhoto] = React.useState<string | null>(() => localStorage.getItem('haru_profile_photo'));
-  const [nickname, setNickname] = React.useState<string>(() => localStorage.getItem('haru_nickname') || user.name);
-  const [isEditingProfile, setIsEditingProfile] = React.useState(false);
-  const [showCompletedModal, setShowCompletedModal] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+const DAYS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+const COLUMNS = [
+  { key: 'meals', label: '식사' },
+  { key: 'groceries', label: '장보기 목록' }
+];
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        setProfilePhoto(dataUrl);
-        localStorage.setItem('haru_profile_photo', dataUrl);
-      };
-      reader.readAsDataURL(file);
+function EditableCell({ value, onSave, placeholder }: { value: string; onSave: (val: string) => void; placeholder: string }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localVal, setLocalVal] = useState(value);
+
+  useEffect(() => {
+    setLocalVal(value);
+  }, [value]);
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (localVal !== value) {
+      onSave(localVal);
     }
   };
 
-  const handleSaveProfile = () => {
-    setIsEditingProfile(false);
-    if (nickname.trim()) {
-      localStorage.setItem('haru_nickname', nickname.trim());
-    }
-  };
-
-  // Stats calculation (오늘 날짜의 할 일만 필터링하여 홈 대시보드에 표시)
-  const localDate = new Date();
-  const todayStr = new Date(localDate.getTime() - (localDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-  const todayTodos = todos.filter(t => t.dueDate === todayStr);
-
-  const totalTodos = todayTodos.length;
-  const completedTodos = todayTodos.filter(t => t.completed).length;
-  const todoProgress = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
-
-  const readingBooks = bLogs.filter(b => b.status !== 'completed');
-  const completedBooks = bLogs.filter(b => b.status === 'completed');
-  
-  const latestDiary = diaries.length > 0 ? diaries[0] : null;
-
-  // Mood frequency translation
-  const moodIcons: Record<string, string> = {
-    happy: '✨',
-    peaceful: '🌱',
-    neutral: '🍙',
-    sad: '☔',
-    tired: '🐈‍⬛',
-    stressed: '🔥',
-  };
-
-  const moodColors: Record<string, string> = {
-    happy: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-    peaceful: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
-    neutral: 'bg-white/5 text-white/70 border-white/10',
-    sad: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
-    tired: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-    stressed: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
-  };
-
-  const moodLabels: Record<string, string> = {
-    happy: '행복함',
-    peaceful: '평온함',
-    neutral: '보통',
-    sad: '슬픔',
-    tired: '피곤함',
-    stressed: '스트레스',
-  };
+  if (isEditing) {
+    return (
+      <textarea
+        autoFocus
+        value={localVal}
+        onChange={e => setLocalVal(e.target.value)}
+        onBlur={handleBlur}
+        className="w-full min-h-[80px] text-[13px] text-neutral-800 bg-white border border-neutral-300 rounded-[8px] p-2 focus:outline-none focus:ring-2 focus:ring-neutral-200 resize-none transition-shadow"
+        placeholder={placeholder}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-4 md:space-y-6 text-neutral-800 font-light">
-      {/* Profile Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-[16px] md:rounded-[20px] p-4 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 flex items-center justify-between"
-      >
-        <div className="flex items-center gap-4">
-          <div className="relative group cursor-pointer" onClick={() => isEditingProfile && fileInputRef.current?.click()}>
-            <div className="h-16 w-16 rounded-full overflow-hidden bg-[#faf9f7] border border-neutral-200 flex items-center justify-center">
-              {profilePhoto ? (
-                <img src={profilePhoto} alt="profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-[24px]">👋</div>
-              )}
-            </div>
-            {isEditingProfile && (
-              <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center">
-                <Camera className="w-5 h-5 text-white opacity-80" />
-              </div>
-            )}
-            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handlePhotoUpload} />
-          </div>
-          <div>
-            {isEditingProfile ? (
-              <input 
-                type="text" 
-                value={nickname} 
-                onChange={(e) => setNickname(e.target.value)} 
-                className="text-[17px] font-medium text-neutral-800 bg-neutral-50 px-3 py-1 rounded-[8px] outline-none border border-neutral-200 w-[140px]"
-                autoFocus
-              />
-            ) : (
-              <h1 className="text-[17px] font-medium text-neutral-800">{nickname}</h1>
-            )}
-            <p className="text-[12px] text-neutral-400 mt-1 cursor-default">오늘도 좋은 하루 보내세요!</p>
-          </div>
-        </div>
-        
-        <button 
-          onClick={() => isEditingProfile ? handleSaveProfile() : setIsEditingProfile(true)}
-          className="p-2.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-full transition-colors"
-        >
-          {isEditingProfile ? <CheckSquare className="w-4 h-4 text-[#9fbb9f]" strokeWidth={2} /> : <Edit2 className="w-4 h-4" strokeWidth={1.5} />}
-        </button>
-      </motion.div>
-
-      {/* Bento Grid - Responsive Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 pt-2">
-
-        {/* Widget 1: Todo Cards Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="md:col-span-1 lg:col-span-7 space-y-4 md:space-y-6"
-        >
-          {/* Todo Dashboard Card */}
-          <div id="todo-progress-card" className="rounded-[16px] md:rounded-[20px] bg-white p-4 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2 text-neutral-800">
-                <ListTodo className="h-4 w-4 text-[#d9ae92]" strokeWidth={1.5} />
-                <h2 className="text-[14px] font-medium tracking-wide border-b border-transparent">오늘의 할 일</h2>
-              </div>
-              <button 
-                onClick={() => setTab('todo')}
-                className="flex items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-700 font-medium cursor-pointer transition-colors px-2 py-1"
-              >
-                더보기 <ChevronRight className="h-3 w-3" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* Range bar progress */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between text-[11px] mb-2 font-medium">
-                <span className="text-neutral-500">완료 진행률</span>
-                <span className="text-neutral-800">{todoProgress}%</span>
-              </div>
-              <div className="h-[3px] w-full bg-neutral-100 rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-[#e6c8c1] rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${todoProgress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
-              </div>
-            </div>
-
-            {/* Mini Todolist Peek */}
-            <div className="space-y-0.5 max-h-[260px] overflow-y-auto pr-1">
-              {todayTodos.length === 0 ? (
-                <div className="text-center py-6 text-neutral-400 text-[12px]">
-                  오늘 등록된 할 일이 없습니다.
-                </div>
-              ) : (
-                todayTodos.slice(0, 5).map(todo => (
-                  <div 
-                    key={todo.id} 
-                    className="flex items-center justify-between p-3 rounded-[12px] bg-transparent hover:bg-[#faf9f7] text-[13px] transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`flex-none flex items-center justify-center h-4 w-4 rounded-full border ${
-                        todo.completed ? 'bg-[#9fbb9f] border-[#9fbb9f]' : 'border-neutral-200 bg-white'
-                      } transition-colors`}>
-                        {todo.completed && <CheckSquare className="h-2.5 w-2.5 text-white" strokeWidth={2.5} />}
-                      </div>
-                      <span className={todo.completed ? 'line-through text-neutral-300' : 'text-neutral-700 font-light'}>
-                        {todo.text}
-                      </span>
-                    </div>
-                    {todo.category && (
-                      <span className="text-[10px] bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                        {todo.category}
-                      </span>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Widget 2: Reading Stats & Book slider */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="md:col-span-1 lg:col-span-5 space-y-4"
-        >
-          <div id="reading-dashboard-card" className="rounded-[16px] md:rounded-[20px] bg-white p-4 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-neutral-100 h-full flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2 text-neutral-800">
-                  <BookOpen className="h-4 w-4 text-[#9fbb9f]" strokeWidth={1.5} />
-                  <h2 className="text-[14px] font-medium tracking-wide border-b border-transparent">책장</h2>
-                </div>
-                <button 
-                  onClick={() => setTab('reading')}
-                  className="flex items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-700 font-medium cursor-pointer transition-colors px-2 py-1"
-                >
-                  더보기 <ChevronRight className="h-3 w-3" strokeWidth={1.5} />
-                </button>
-              </div>
-
-              {/* Cover stack & progress */}
-              <div className="space-y-4">
-                {readingBooks.length === 0 ? (
-                  <div className="text-center py-6">
-                    <p className="text-[12px] text-neutral-400 font-light">진행 중인 독서가 없어요.</p>
-                  </div>
-                ) : (
-                  readingBooks.slice(0, 2).map(book => {
-                    const percent = Math.round((book.currentPage / book.totalPages) * 100);
-                    return (
-                      <div key={book.id} className="w-full">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-[13px] font-medium text-neutral-800 truncate mb-1">{book.title}</h4>
-                          <p className="text-[11px] text-neutral-400 mb-2 truncate">{book.author}</p>
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="h-[2px] flex-1 bg-neutral-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#9fbb9f]" style={{ width: `${percent}%` }} />
-                            </div>
-                            <span className="text-[10px] text-neutral-500 font-medium flex-none">{percent}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Total book badge */}
-            <div 
-              onClick={() => completedBooks.length > 0 && setShowCompletedModal(true)}
-              className={`mt-8 pt-5 border-t border-neutral-100 flex justify-between items-center text-[12px] text-neutral-500 font-light ${
-                completedBooks.length > 0 ? 'cursor-pointer hover:opacity-85 transition-all' : 'cursor-default'
-              }`}
-              title={completedBooks.length > 0 ? "완독한 도서 목록 보기" : undefined}
-            >
-              <span className="flex items-center gap-1.5">
-                <BookMarked className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.5} />
-                완독한 도서
-              </span>
-              <span className={`font-medium text-neutral-700 bg-neutral-50 px-2.5 py-1 rounded-full transition-colors ${
-                completedBooks.length > 0 ? 'group-hover:bg-neutral-100' : ''
-              }`}>{completedBooks.length}권</span>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Completed Books Modal */}
-      <AnimatePresence>
-        {showCompletedModal && (
-          <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 pb-[80px] sm:pb-4 text-neutral-800">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[24px] max-w-md w-full p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-neutral-100 space-y-4"
-            >
-              <div className="flex justify-between items-center border-b border-neutral-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4.5 w-4.5 text-[#9fbb9f]" strokeWidth={2} />
-                  <h3 className="text-[14px] font-semibold text-neutral-800 tracking-wide">완독한 도서 목록</h3>
-                </div>
-                <span className="text-[11px] font-medium text-neutral-400">총 {completedBooks.length}권</span>
-              </div>
-
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                {completedBooks.map(book => (
-                  <div 
-                    key={book.id} 
-                    className="p-3.5 rounded-[12px] bg-[#faf9f7] border border-neutral-100 flex flex-col gap-1 hover:border-neutral-200 transition-all text-left"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <h4 className="text-[13px] font-medium text-neutral-800 truncate max-w-[220px]" title={book.title}>
-                        {book.title}
-                      </h4>
-                      {book.endDate && (
-                        <span className="text-[9px] text-neutral-400 flex-none bg-white border border-neutral-100 px-1.5 py-0.2 rounded">
-                          {book.endDate} 완독
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-neutral-400 truncate max-w-[250px]">{book.author}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={() => setShowCompletedModal(false)}
-                  className="h-9 px-5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-[12px] text-[12px] font-medium transition-colors cursor-pointer"
-                >
-                  닫기
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+    <div
+      onClick={() => setIsEditing(true)}
+      className={`w-full min-h-[80px] text-[13px] p-2 rounded-[8px] border border-transparent hover:border-neutral-200 hover:bg-white cursor-pointer transition-all whitespace-pre-wrap ${localVal ? 'text-neutral-800' : 'text-neutral-400'}`}
+    >
+      {localVal || <span className="opacity-0 group-hover:opacity-100 transition-opacity">클릭하여 {placeholder} 추가...</span>}
     </div>
   );
 }
+
+export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }: DashboardProps) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const getMonday = (d: Date) => {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(date.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  };
+
+  const getWeekString = (d: Date) => {
+    const date = new Date(d);
+    const month = date.getMonth() + 1;
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const dayOffset = (firstDayOfMonth.getDay() + 6) % 7; // Monday = 0
+    const weekNumber = Math.ceil((date.getDate() + dayOffset) / 7);
+    const weekNames = ['첫째주', '둘째주', '셋째주', '넷째주', '다섯째주', '여섯째주'];
+    return `${month}월 ${weekNames[weekNumber - 1]}`;
+  };
+
+  const handlePrevWeek = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() - 7);
+    setCurrentDate(newDate);
+  };
+
+  const handleNextWeek = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + 7);
+    setCurrentDate(newDate);
+  };
+
+  const weekId = getMonday(currentDate);
+
+  const getPlanForDay = (day: string) => {
+    const dayId = `${weekId}-${day}`;
+    // Fallback to legacy id (just 'day') if data exists from earlier
+    const existingPlan = mealPlans.find(m => m.id === dayId) || mealPlans.find(m => m.id === day);
+    return existingPlan || { id: dayId, meals: '', groceries: '' };
+  };
+
+  return (
+    <div className="space-y-6 text-neutral-800 font-light pb-20 md:pb-0">
+      <div className="bg-white p-4 md:p-6 rounded-[20px] shadow-sm border border-neutral-100">
+        
+        {/* Header with Week Selector */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-orange-50 flex items-center justify-center rounded-[12px] flex-shrink-0">
+              <Utensils className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-neutral-800">주간 식단 표</h2>
+              <p className="text-[12px] md:text-[13px] text-neutral-400 mt-0.5">원하는 주차를 선택해 식단을 기록하세요</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 bg-neutral-50 p-1.5 rounded-xl self-end md:self-auto">
+            <button onClick={handlePrevWeek} className="p-1.5 hover:bg-white rounded-[8px] transition-colors text-neutral-500 hover:text-neutral-800 shadow-sm cursor-pointer">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-[13px] font-bold text-neutral-700 min-w-[76px] text-center">
+              {getWeekString(currentDate)}
+            </span>
+            <button onClick={handleNextWeek} className="p-1.5 hover:bg-white rounded-[8px] transition-colors text-neutral-500 hover:text-neutral-800 shadow-sm cursor-pointer">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile-friendly table container: removed horizontal scrolling, fits to screen */}
+        <div className="w-full">
+          <table className="w-full text-left border-collapse table-fixed">
+            <thead>
+              <tr className="border-b-2 border-neutral-800">
+                <th className="py-2 md:py-3 px-1 md:px-4 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[16%] md:w-[20%] text-center md:text-left">요일</th>
+                {COLUMNS.map(col => (
+                  <th key={col.key} className="py-2 md:py-3 px-1 md:px-4 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[42%] md:w-[40%] text-center md:text-left">{col.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {DAYS.map((day) => {
+                const plan = getPlanForDay(day);
+                const dayId = `${weekId}-${day}`;
+                
+                return (
+                  <tr key={dayId} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors group">
+                    <td className="py-2 md:py-3 px-1 md:px-4 text-[12px] md:text-[13px] font-medium text-neutral-700 bg-neutral-50/30 group-hover:bg-transparent align-top pt-4 text-center md:text-left">
+                      {/* Show full day name on desktop, short on mobile (e.g. '월') */}
+                      <span className="hidden md:inline">{day}</span>
+                      <span className="md:hidden">{day[0]}</span>
+                    </td>
+                    {COLUMNS.map(col => (
+                      <td key={col.key} className="py-2 md:py-3 px-1 md:px-4 align-top">
+                        <EditableCell
+                          value={col.key === 'meals' ? plan.meals : plan.groceries}
+                          onSave={(val) => {
+                            if (handleUpdateMealPlan) {
+                              // We always save under the new weekId format
+                              handleUpdateMealPlan(dayId, { [col.key]: val });
+                            }
+                          }}
+                          placeholder={col.label}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+

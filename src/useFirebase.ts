@@ -10,6 +10,7 @@ export function useFirebase() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [books, setBooks] = useState<BookLog[]>([]);
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
+  const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [categories, setCategories] = useState<string[]>(() => {
     const saved = localStorage.getItem('haru_categories');
     return saved ? JSON.parse(saved) : ['Work', 'Personal', 'Reading', 'Health', 'Other'];
@@ -61,11 +62,18 @@ export function useFirebase() {
       setDiaries(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'users/{userId}/diaries'));
 
+    const mealPlansQ = query(collection(db, 'users', user.uid, 'mealPlans'), where('userId', '==', user.uid));
+    const unsubMealPlans = onSnapshot(mealPlansQ, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlan));
+      setMealPlans(data);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users/{userId}/mealPlans'));
+
     return () => {
       unsubTodos();
       unsubRoutines();
       unsubBooks();
       unsubDiaries();
+      unsubMealPlans();
     };
   }, [user]);
 
@@ -88,6 +96,11 @@ export function useFirebase() {
      if (!currentTodo) return;
      const docRef = doc(db, 'users', user.uid, 'todos', id);
      await updateDoc(docRef, { completed: !currentTodo.completed, updatedAt: serverTimestamp() }).catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
+  };
+  const handleUpdateTodo = async (id: string, updates: Partial<Todo>) => {
+     if (!user) return;
+     const docRef = doc(db, 'users', user.uid, 'todos', id);
+     await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() }).catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
   };
   const handleDeleteTodo = async (id: string) => {
      if (!user) return;
@@ -233,6 +246,13 @@ export function useFirebase() {
     await deleteDoc(docRef).catch(e => handleFirestoreError(e, OperationType.DELETE, docRef.path));
   };
 
+  const handleUpdateMealPlan = async (id: string, updates: Partial<MealPlan>) => {
+    if (!user) return;
+    const docRef = doc(db, 'users', user.uid, 'mealPlans', id);
+    await setDoc(docRef, { ...updates, userId: user.uid, updatedAt: serverTimestamp() }, { merge: true })
+      .catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
+  };
+
   return {
     user,
     todos,
@@ -243,6 +263,7 @@ export function useFirebase() {
     diaries,
     handleAddTodo,
     handleToggleTodo,
+    handleUpdateTodo,
     handleDeleteTodo,
     handleAddBook,
     handleUpdateBookProgress,
@@ -252,5 +273,7 @@ export function useFirebase() {
     handleAddRoutine,
     handleUpdateRoutine,
     handleDeleteRoutine,
+    mealPlans,
+    handleUpdateMealPlan,
   };
 }

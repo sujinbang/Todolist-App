@@ -7,6 +7,8 @@ export interface Todo {
   dueDate: string;
   routineId?: string; // 루틴에서 생성된 할일인 경우
   isFromRoutine?: boolean; // 루틴 자동 생성 여부
+  imageUrl?: string; // 식단 기록 등 사진 첨부 (하위 호환)
+  imageUrls?: string[]; // 다중 사진 첨부
 }
 
 export interface Routine {
@@ -44,4 +46,10 @@ export interface DiaryEntry {
   weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy';
   imageUrl?: string;    // 하위 호환용 (기존 데이터)
   imageUrls?: string[]; // 여러 장 사진
+}
+
+export interface MealPlan {
+  id: string; // The day (e.g. '월요일', '화요일')
+  meals: string;
+  groceries: string;
 }
