@@ -20,14 +20,12 @@ interface ChecklistItem {
 }
 
 export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }: DashboardProps) {
-  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const [selectedMonday, setSelectedMonday] = useState(() => {
     const d = new Date();
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
   });
-  const [filterDay, setFilterDay] = useState('전체');
 
   // Modal State
   const [editingDayId, setEditingDayId] = useState<string | null>(null);
@@ -41,65 +39,35 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
   const [groceries, setGroceries] = useState<ChecklistItem[]>([]);
   const [newGrocery, setNewGrocery] = useState('');
 
-  const getWeeksInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const weeks: Date[] = [];
+  const prevWeek = () => {
+    const d = new Date(selectedMonday);
+    d.setDate(d.getDate() - 7);
+    setSelectedMonday(d);
+  };
+
+  const nextWeek = () => {
+    const d = new Date(selectedMonday);
+    d.setDate(d.getDate() + 7);
+    setSelectedMonday(d);
+  };
+
+  const getWeekLabel = (monday: Date) => {
+    const year = monday.getFullYear();
+    const month = monday.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const fdow = firstDayOfMonth.getDay();
+    const diff = firstDayOfMonth.getDate() - fdow + (fdow === 0 ? -6 : 1);
+    const startMondayOfMonth = new Date(firstDayOfMonth.setDate(diff));
     
-    const firstDay = new Date(year, month, 1);
-    const firstDayOfWeek = firstDay.getDay();
-    const diff = firstDay.getDate() - firstDayOfWeek + (firstDayOfWeek === 0 ? -6 : 1);
-    const startMonday = new Date(firstDay.setDate(diff));
-
-    for (let i = 0; i < 6; i++) {
-      const monday = new Date(startMonday);
-      monday.setDate(startMonday.getDate() + (i * 7));
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      
-      if (monday.getMonth() === month || sunday.getMonth() === month) {
-        weeks.push(monday);
-      }
-    }
-    return weeks;
-  };
-
-  const prevMonth = () => {
-    const d = new Date(currentMonthDate);
-    d.setMonth(d.getMonth() - 1);
-    setCurrentMonthDate(d);
-    const weeks = getWeeksInMonth(d);
-    setSelectedMonday(weeks[0]);
-    setFilterDay('전체');
-  };
-
-  const nextMonth = () => {
-    const d = new Date(currentMonthDate);
-    d.setMonth(d.getMonth() + 1);
-    setCurrentMonthDate(d);
-    const weeks = getWeeksInMonth(d);
-    setSelectedMonday(weeks[0]);
-    setFilterDay('전체');
+    const weekIndex = Math.round((monday.getTime() - startMondayOfMonth.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    return `${month + 1}월 ${weekIndex + 1}째주`;
   };
 
   const weekId = selectedMonday.toISOString().split('T')[0];
-  const weeks = getWeeksInMonth(currentMonthDate);
 
-  // Get exactly which dates in this week belong to the current month
-  const getWeekDatesInMonth = () => {
-    const dates: Date[] = [];
-    const currentMonth = currentMonthDate.getMonth();
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(selectedMonday);
-      d.setDate(selectedMonday.getDate() + i);
-      if (d.getMonth() === currentMonth) {
-        dates.push(d);
-      }
-    }
-    return dates;
-  };
-
-  const activeDays = getWeekDatesInMonth().map(d => {
+  const activeDays = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(selectedMonday);
+    d.setDate(selectedMonday.getDate() + i);
     const dayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
     return {
       date: d,
@@ -107,7 +75,7 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
       shortName: SHORT_DAYS[dayIdx],
       dayEn: DAYS_EN[dayIdx],
       id: `${weekId}-${DAYS_EN[dayIdx]}`,
-      label: `${d.getDate()}일 (${SHORT_DAYS[dayIdx]})`
+      label: `${d.getMonth() + 1}/${d.getDate()} (${SHORT_DAYS[dayIdx]})`
     };
   });
 
@@ -122,7 +90,7 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
     
     setEditingDayId(dayObj.id);
     setEditingDayName(dayObj.dayName);
-    setEditingDayDateStr(`${currentMonthDate.getMonth() + 1}월 ${dayObj.date.getDate()}일`);
+    setEditingDayDateStr(`${dayObj.date.getMonth() + 1}월 ${dayObj.date.getDate()}일`);
     setEditBreakfast(plan.breakfast || plan.meals || '');
     setEditLunch(plan.lunch || '');
     setEditDinner(plan.dinner || '');
@@ -146,6 +114,7 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
         breakfast: editBreakfast,
         lunch: editLunch,
         dinner: editDinner,
+        meals: '', // clear old legacy field
         groceries: JSON.stringify(groceries)
       });
     }
@@ -166,7 +135,28 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
     setNewGrocery('');
   };
 
-  const filteredDays = filterDay === '전체' ? activeDays : activeDays.filter(d => d.shortName === filterDay);
+  const allWeeklyGroceries: { dayId: string; grocery: ChecklistItem }[] = [];
+  activeDays.forEach(dayObj => {
+    const plan = getPlanForDay(dayObj.dayEn, dayObj.dayName);
+    try {
+      const gList: ChecklistItem[] = JSON.parse(plan.groceries || '[]');
+      gList.forEach(g => {
+        if (!g.checked) {
+          allWeeklyGroceries.push({ dayId: plan.id, grocery: g });
+        }
+      });
+    } catch { /* ignore */ }
+  });
+
+  const checkWeeklyGrocery = (dayId: string, groceryId: string) => {
+    if (!handleUpdateMealPlan) return;
+    const plan = mealPlans.find(m => m.id === dayId) || { id: dayId, groceries: '[]' };
+    try {
+      const gList: ChecklistItem[] = JSON.parse(plan.groceries || '[]');
+      const updatedList = gList.map(g => g.id === groceryId ? { ...g, checked: true } : g);
+      handleUpdateMealPlan(dayId, { groceries: JSON.stringify(updatedList) });
+    } catch {}
+  };
 
   return (
     <div className="space-y-6 text-neutral-800 font-light pb-20 md:pb-0 w-full max-w-full overflow-x-hidden">
@@ -176,65 +166,51 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
         <h2 className="text-[14px] font-semibold text-neutral-800">주간 식단 계획표</h2>
       </div>
 
-      {/* Header & Month/Week Controls */}
-      <div className="rounded-md border border-neutral-100 bg-white p-4 shadow-sm space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={prevMonth} className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700 transition-colors">
+      {/* Header & Weekly Calendar */}
+      <div className="rounded-md border border-neutral-100 bg-white p-4 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[15px] font-bold text-neutral-800 hidden sm:block">
+            {selectedMonday.getFullYear()}년 주간 식단
+          </span>
+          <div className="flex items-center gap-2 mx-auto sm:mx-0">
+            <button onClick={prevWeek} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-[15px] font-bold text-neutral-800">{currentMonthDate.getFullYear()}년 {currentMonthDate.getMonth() + 1}월</span>
-            <button onClick={nextMonth} className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700 transition-colors">
+            <span className="text-[14px] font-bold text-neutral-800 min-w-[70px] text-center">{getWeekLabel(selectedMonday)}</span>
+            <button onClick={nextWeek} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-700 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-
-          <div className="flex items-center gap-1 flex-wrap w-full md:w-auto">
-            {weeks.map((monday, idx) => {
-              const isSelected = selectedMonday.getTime() === monday.getTime();
-              return (
-                <button
-                  key={idx}
-                  onClick={() => { setSelectedMonday(monday); setFilterDay('전체'); }}
-                  className={`px-2 py-1 rounded text-[12px] font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0 ${
-                    isSelected ? 'bg-neutral-50 text-neutral-800' : 'text-neutral-500 hover:bg-white hover:text-neutral-800'
-                  }`}
-                >
-                  {currentMonthDate.getMonth() + 1}월 {idx + 1}째주
-                </button>
-              );
-            })}
-          </div>
         </div>
 
-        {/* Day Filters */}
-        <div className="flex items-center gap-1 flex-wrap w-full">
-          <button
-            onClick={() => setFilterDay('전체')}
-            className={`px-2 py-1 rounded text-[12px] font-medium transition-colors cursor-pointer whitespace-nowrap ${
-              filterDay === '전체' ? 'bg-neutral-50 text-neutral-800' : 'text-neutral-500 hover:bg-white hover:text-neutral-800'
-            }`}
-          >
-            전체
-          </button>
-          {activeDays.map(dayObj => (
-            <button
-              key={dayObj.shortName}
-              onClick={() => setFilterDay(dayObj.shortName)}
-              className={`px-2 py-1 rounded text-[12px] font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                filterDay === dayObj.shortName ? 'bg-neutral-50 text-neutral-800' : 'text-neutral-500 hover:bg-white hover:text-neutral-800'
-              }`}
-            >
-              {dayObj.label}
-            </button>
-          ))}
+        {/* Weekly Calendar Strip */}
+        <div className="flex items-center justify-between overflow-x-auto custom-scrollbar gap-1">
+          {activeDays.map(dayObj => {
+            const isToday = new Date().toISOString().split('T')[0] === dayObj.date.toISOString().split('T')[0];
+            return (
+              <button 
+                key={dayObj.id} 
+                onClick={() => openModal(dayObj)}
+                className={`flex-1 flex flex-col items-center justify-center px-2 py-2 min-w-[45px] sm:min-w-[60px] rounded-[10px] transition-colors ${
+                  isToday ? 'bg-[#d9ae92] text-white shadow-sm' : 'hover:bg-neutral-50 text-neutral-600'
+                }`}
+              >
+                <span className={`text-[10px] sm:text-[11px] font-medium mb-0.5 ${isToday ? 'text-white/90' : 'text-neutral-400'}`}>
+                  {dayObj.shortName}
+                </span>
+                <span className={`text-[14px] sm:text-[15px] ${isToday ? 'text-white font-medium' : 'text-neutral-700'}`}>
+                  {dayObj.date.getDate()}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <AnimatePresence mode="popLayout">
-          {filteredDays.map(dayObj => {
+          {activeDays.map(dayObj => {
             const plan = getPlanForDay(dayObj.dayEn, dayObj.dayName);
             
             let gList: ChecklistItem[] = [];
@@ -254,28 +230,28 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
               >
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h3 className="font-bold text-neutral-800 text-[15px]">{dayObj.label}</h3>
+                    <h3 className="font-semibold text-neutral-800 text-[14px]">{dayObj.label}</h3>
                   </div>
                   {hasData && <Check className="w-4 h-4 text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity" />}
                 </div>
 
-                <div className="space-y-3 flex-1">
+                <div className="space-y-3 flex-1 flex flex-col">
                   {(plan.breakfast || plan.meals) ? (
                     <div>
-                      <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded">🍳 아침</span>
-                      <p className="text-[13px] text-neutral-700 mt-1 line-clamp-2 leading-relaxed">{plan.breakfast || plan.meals}</p>
+                      <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">🍳 아침</span>
+                      <p className="text-[13px] text-neutral-700 mt-1 line-clamp-2 leading-relaxed pl-1">{plan.breakfast || plan.meals}</p>
                     </div>
                   ) : null}
                   {plan.lunch && (
                     <div>
-                      <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded">🍱 점심</span>
-                      <p className="text-[13px] text-neutral-700 mt-1 line-clamp-2 leading-relaxed">{plan.lunch}</p>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">🍱 점심</span>
+                      <p className="text-[13px] text-neutral-700 mt-1 line-clamp-2 leading-relaxed pl-1">{plan.lunch}</p>
                     </div>
                   )}
                   {plan.dinner && (
                     <div>
-                      <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded">🍲 저녁</span>
-                      <p className="text-[13px] text-neutral-700 mt-1 line-clamp-2 leading-relaxed">{plan.dinner}</p>
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">🍲 저녁</span>
+                      <p className="text-[13px] text-neutral-700 mt-1 line-clamp-2 leading-relaxed pl-1">{plan.dinner}</p>
                     </div>
                   )}
                   {!hasData && (
@@ -310,6 +286,29 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
           })}
         </AnimatePresence>
       </div>
+
+      {/* Weekly Unchecked Groceries */}
+      {allWeeklyGroceries.length > 0 && (
+        <div className="rounded-md border border-neutral-100 bg-white p-5 shadow-sm mt-6">
+          <h3 className="text-[13px] font-bold text-neutral-800 mb-3 flex items-center gap-2">
+            🛒 이번 주 장보기 목록 모아보기 <span className="bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded text-[10px]">{allWeeklyGroceries.length}</span>
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {allWeeklyGroceries.map(item => (
+              <button
+                key={`${item.dayId}-${item.grocery.id}`}
+                onClick={() => checkWeeklyGrocery(item.dayId, item.grocery.id)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#faf9f7] border border-neutral-100 rounded-[10px] text-[13px] text-neutral-700 hover:bg-neutral-100 hover:border-neutral-200 transition-all group"
+              >
+                <div className="w-3.5 h-3.5 border border-neutral-300 rounded-[4px] flex items-center justify-center group-hover:border-neutral-400 transition-colors bg-white shrink-0">
+                  <Check className="w-2.5 h-2.5 text-transparent group-hover:text-neutral-400" />
+                </div>
+                <span>{item.grocery.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       <AnimatePresence>
