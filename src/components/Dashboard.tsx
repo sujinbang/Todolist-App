@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Utensils, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Utensils, ChevronLeft, ChevronRight, Check, Plus, Trash2 } from 'lucide-react';
 import { Todo, BookLog, DiaryEntry, MealPlan } from '../types';
 
 interface DashboardProps {
@@ -27,23 +27,31 @@ function EditableCell({ value, onSave, placeholder }: { value: string; onSave: (
     setLocalVal(value);
   }, [value]);
 
-  const handleBlur = () => {
-    setIsEditing(false);
+  const handleSave = () => {
     if (localVal !== value) {
       onSave(localVal);
     }
+    setIsEditing(false);
   };
 
   if (isEditing) {
     return (
-      <textarea
-        autoFocus
-        value={localVal}
-        onChange={e => setLocalVal(e.target.value)}
-        onBlur={handleBlur}
-        className="w-full min-h-[80px] text-[13px] text-neutral-800 bg-white border border-neutral-300 rounded-[8px] p-2 focus:outline-none focus:ring-2 focus:ring-neutral-200 resize-none transition-shadow"
-        placeholder={placeholder}
-      />
+      <div className="relative w-full">
+        <textarea
+          autoFocus
+          value={localVal}
+          onChange={e => setLocalVal(e.target.value)}
+          onBlur={() => handleSave()}
+          className="w-full min-h-[80px] text-[13px] text-neutral-800 bg-white border border-orange-300 rounded-[8px] p-2 pb-8 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none transition-shadow shadow-sm"
+          placeholder={placeholder}
+        />
+        <button 
+          onMouseDown={(e) => { e.preventDefault(); handleSave(); }}
+          className="absolute bottom-2 right-2 p-1.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors flex items-center justify-center z-10"
+        >
+          <Check className="w-3.5 h-3.5" />
+        </button>
+      </div>
     );
   }
 
@@ -52,7 +60,122 @@ function EditableCell({ value, onSave, placeholder }: { value: string; onSave: (
       onClick={() => setIsEditing(true)}
       className={`w-full min-h-[80px] text-[13px] p-2 rounded-[8px] border border-transparent hover:border-neutral-200 hover:bg-white cursor-pointer transition-all whitespace-pre-wrap ${localVal ? 'text-neutral-800' : 'text-neutral-400'}`}
     >
-      {localVal || <span className="opacity-0 group-hover:opacity-100 transition-opacity">클릭하여 {placeholder} 추가...</span>}
+      {localVal || <span className="opacity-0 hover:opacity-100 transition-opacity">클릭하여 {placeholder} 추가...</span>}
+    </div>
+  );
+}
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
+function ChecklistCell({ value, onSave, placeholder }: { value: string; onSave: (val: string) => void; placeholder: string }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [newItemText, setNewItemText] = useState('');
+
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(value || '[]');
+      if (Array.isArray(parsed)) {
+        setItems(parsed);
+      } else {
+        throw new Error('Not an array');
+      }
+    } catch {
+      const lines = (value || '').split('\n').filter(l => l.trim());
+      setItems(lines.map(l => ({ id: Math.random().toString(), text: l, checked: false })));
+    }
+  }, [value]);
+
+  const saveToParent = (newItems: ChecklistItem[]) => {
+    onSave(JSON.stringify(newItems));
+  };
+
+  const toggleCheck = (id: string) => {
+    const newItems = items.map(it => it.id === id ? { ...it, checked: !it.checked } : it);
+    setItems(newItems);
+    saveToParent(newItems);
+  };
+
+  const removeItem = (id: string) => {
+    const newItems = items.filter(it => it.id !== id);
+    setItems(newItems);
+    saveToParent(newItems);
+  };
+
+  const handleAddItem = () => {
+    if (!newItemText.trim()) return;
+    const newItems = [...items, { id: Date.now().toString(), text: newItemText.trim(), checked: false }];
+    setItems(newItems);
+    saveToParent(newItems);
+    setNewItemText('');
+  };
+
+  if (isEditing) {
+    return (
+      <div className="relative w-full min-h-[80px] bg-white border border-orange-300 rounded-[8px] p-2 pb-8 flex flex-col gap-2 shadow-sm">
+        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+          {items.map(it => (
+            <div key={it.id} className="flex items-center justify-between group bg-neutral-50 p-1.5 rounded-md border border-neutral-100">
+              <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                <input type="checkbox" checked={it.checked} onChange={() => toggleCheck(it.id)} className="w-3.5 h-3.5 accent-orange-500 rounded-sm cursor-pointer flex-shrink-0" />
+                <span className={`text-[13px] truncate ${it.checked ? 'line-through text-neutral-400' : 'text-neutral-700'}`}>{it.text}</span>
+              </div>
+              <button onClick={() => removeItem(it.id)} className="text-neutral-400 hover:text-red-500 transition-colors p-1">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <input
+            type="text"
+            value={newItemText}
+            onChange={e => setNewItemText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem(); } }}
+            className="flex-1 text-[13px] outline-none border-b border-neutral-200 focus:border-orange-500 pb-0.5 bg-transparent placeholder-neutral-400"
+            placeholder="항목 입력 후 엔터..."
+            autoFocus
+          />
+          <button onClick={handleAddItem} className="p-1 bg-orange-50 text-orange-600 rounded-md hover:bg-orange-100 transition-colors flex-shrink-0">
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+        <button 
+          onMouseDown={(e) => { e.preventDefault(); setIsEditing(false); }}
+          className="absolute bottom-2 right-2 p-1.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors flex items-center justify-center z-10"
+        >
+          <Check className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setIsEditing(true)}
+      className="w-full min-h-[80px] text-[13px] p-2 rounded-[8px] border border-transparent hover:border-neutral-200 hover:bg-white cursor-pointer transition-all"
+    >
+      {items.length === 0 ? (
+        <span className="opacity-0 hover:opacity-100 transition-opacity text-neutral-400">클릭하여 {placeholder} 추가...</span>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map(it => (
+            <div key={it.id} className="flex items-start gap-2">
+              <input 
+                type="checkbox" 
+                checked={it.checked} 
+                onChange={(e) => { e.stopPropagation(); toggleCheck(it.id); }} 
+                className="w-3.5 h-3.5 accent-orange-500 rounded-sm cursor-pointer mt-0.5 flex-shrink-0" 
+              />
+              <span className={`leading-snug ${it.checked ? 'line-through text-neutral-400' : 'text-neutral-700'}`}>{it.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -153,16 +276,27 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
                     </td>
                     {COLUMNS.map(col => (
                       <td key={col.key} className="py-2 md:py-3 px-1 md:px-4 align-top">
-                        <EditableCell
-                          value={col.key === 'meals' ? plan.meals : plan.groceries}
-                          onSave={(val) => {
-                            if (handleUpdateMealPlan) {
-                              // We always save under the new weekId format
-                              handleUpdateMealPlan(dayId, { [col.key]: val });
-                            }
-                          }}
-                          placeholder={col.label}
-                        />
+                        {col.key === 'meals' ? (
+                          <EditableCell
+                            value={plan.meals}
+                            onSave={(val) => {
+                              if (handleUpdateMealPlan) {
+                                handleUpdateMealPlan(dayId, { [col.key]: val });
+                              }
+                            }}
+                            placeholder={col.label}
+                          />
+                        ) : (
+                          <ChecklistCell
+                            value={plan.groceries}
+                            onSave={(val) => {
+                              if (handleUpdateMealPlan) {
+                                handleUpdateMealPlan(dayId, { [col.key]: val });
+                              }
+                            }}
+                            placeholder={col.label}
+                          />
+                        )}
                       </td>
                     ))}
                   </tr>
