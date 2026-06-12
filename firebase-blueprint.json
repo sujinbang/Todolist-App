@@ -82,6 +82,18 @@
         "userId": { "type": "string" }
       },
       "required": ["date", "title", "content", "mood", "userId"]
+    },
+    "MealPlan": {
+      "title": "A meal plan",
+      "description": "A weekly meal plan.",
+      "type": "object",
+      "properties": {
+        "meals": { "type": "string" },
+        "groceries": { "type": "string" },
+        "updatedAt": { "type": "timestamp" },
+        "userId": { "type": "string" }
+      },
+      "required": ["userId"]
     }
   },
   "firestore": {
@@ -104,6 +116,10 @@
     "/users/{userId}/diaries/{diaryId}": {
       "schema": { "$ref": "DiaryEntry" },
       "description": "User's diaries"
+    },
+    "/users/{userId}/mealPlans/{mealPlanId}": {
+      "schema": { "$ref": "MealPlan" },
+      "description": "User's meal plans"
     }
   }
 }
