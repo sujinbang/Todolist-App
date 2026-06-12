@@ -330,7 +330,7 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
                 </button>
               </div>
               
-              <div className="flex-1 flex flex-col pr-1 space-y-4">
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col space-y-4">
                 {/* 식단 입력 */}
                 <div className="space-y-3 shrink-0">
                   <div>
@@ -371,9 +371,9 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
                 <div className="h-[1px] bg-neutral-100 w-full shrink-0" />
 
                 {/* 장보기 목록 */}
-                <div className="flex-1 flex flex-col min-h-[160px] overflow-hidden">
+                <div className="flex flex-col min-h-[160px]">
                   <label className="block text-[13px] font-bold text-neutral-800 mb-2 shrink-0">🛒 장보기 목록</label>
-                  <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar mb-3 pr-1">
+                  <div className="space-y-2 mb-3 pr-1">
                     {groceries.map(g => (
                       <div key={g.id} className="flex items-center justify-between group bg-white border border-neutral-100 p-2 rounded-[10px] hover:border-neutral-200 transition-colors">
                         <div className="flex items-center gap-2.5 flex-1 overflow-hidden">
