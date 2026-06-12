@@ -153,7 +153,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
   });
 
   return (
-    <div className="space-y-6 text-neutral-800 w-full max-w-full overflow-x-hidden pb-4">
+    <div className="space-y-6 text-neutral-800">
       {/* Tab Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-[14px] font-semibold text-neutral-800">독서 기록</h2>
@@ -306,7 +306,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
       <div className="space-y-4">
         {/* Shelf Sub Header & Search filters */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-md bg-white border border-neutral-100">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 w-full max-w-full">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 min-w-0 flex-1 custom-scrollbar">
             <button
               onClick={() => setFilterType('All')}
               className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
@@ -341,7 +341,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
             </button>
           </div>
 
-          <div className="relative w-full md:w-64">
+          <div className="relative w-full md:w-64 shrink-0">
             <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-800/30" />
             <input
               type="text"
@@ -389,7 +389,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                         {(() => {
                           const imgs = getBookImages(book);
                           return imgs.length > 0 ? (
-                            <div className="mb-2 flex gap-1.5 overflow-x-auto w-full max-w-full">
+                            <div className="mb-2 flex gap-1.5 overflow-x-auto min-w-0 max-w-full custom-scrollbar pb-1">
                               {imgs.slice(0, 3).map((url, idx) => (
                                 <div key={idx} className="relative shrink-0">
                                   <img src={url} alt="" className="h-14 w-14 object-cover rounded border border-neutral-100" />
@@ -547,7 +547,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                           </>
                         )}
                       </div>
-                      <div className="flex gap-1.5 overflow-x-auto pb-1">
+                      <div className="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                         {editImageUrls.map((url, idx) => (
                           <div key={idx} className="relative shrink-0 group">
                             <button type="button" onClick={() => setEditImgIdx(idx)}
@@ -655,7 +655,7 @@ export default function ReadingLog({ bLogs, onAddBook, onUpdateProgress, onDelet
                         )}
                       </div>
                       {imgs.length > 1 && (
-                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                           {imgs.map((url, idx) => (
                             <button key={idx} onClick={() => setViewImgIdx(idx)}
                               className={`shrink-0 h-12 w-12 rounded border-2 overflow-hidden transition-all cursor-pointer ${
