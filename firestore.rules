@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-가-힣]+$');
     }
 
     function incoming() {
@@ -132,6 +132,25 @@ service cloud.firestore {
                          incoming().userId == existing().userId;
 
         allow delete: if isOwner(userId) && isValidId(userId) && isValidId(diaryId);
+      }
+      match /mealPlans/{mealPlanId} {
+        allow read: if isOwner(userId) && (resource == null || resource.data.userId == request.auth.uid);
+        
+        function isValidMealPlan(data) {
+          return data.keys().hasAll(['userId']) &&
+                 data.userId == request.auth.uid &&
+                 (!data.keys().hasAny(['meals']) || data.meals is string) &&
+                 (!data.keys().hasAny(['groceries']) || data.groceries is string);
+        }
+
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(mealPlanId) &&
+                         isValidMealPlan(incoming());
+                         
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(mealPlanId) &&
+                         isValidMealPlan(incoming()) &&
+                         incoming().userId == existing().userId;
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(mealPlanId);
       }
     }
   }
