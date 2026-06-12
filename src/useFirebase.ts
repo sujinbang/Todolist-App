@@ -58,22 +58,33 @@ export function useFirebase() {
 
     const diariesQ = query(collection(db, 'users', user.uid, 'diaries'), where('userId', '==', user.uid));
     const unsubDiaries = onSnapshot(diariesQ, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DiaryEntry));
-      setDiaries(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users/{userId}/diaries'));
+      const rawDocs = snapshot.docs;
+      
+      // Separate normal diaries from system storage
+      const normalDiaries = rawDocs
+        .filter(doc => doc.id !== 'SYSTEM_MEAL_PLANS')
+        .map(doc => ({ id: doc.id, ...doc.data() } as DiaryEntry));
+      setDiaries(normalDiaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
-    const mealPlansQ = query(collection(db, 'users', user.uid, 'mealPlans'), where('userId', '==', user.uid));
-    const unsubMealPlans = onSnapshot(mealPlansQ, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlan));
-      setMealPlans(data);
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users/{userId}/mealPlans'));
+      // Read meal plans from system storage diary
+      const storageDoc = rawDocs.find(doc => doc.id === 'SYSTEM_MEAL_PLANS');
+      if (storageDoc) {
+        try {
+          const mpData = JSON.parse(storageDoc.data().content);
+          setMealPlans(Array.isArray(mpData) ? mpData : []);
+        } catch(e) {
+          setMealPlans([]);
+        }
+      } else {
+        setMealPlans([]);
+      }
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users/{userId}/diaries'));
 
     return () => {
       unsubTodos();
       unsubRoutines();
       unsubBooks();
       unsubDiaries();
-      unsubMealPlans();
     };
   }, [user]);
 
@@ -248,9 +259,29 @@ export function useFirebase() {
 
   const handleUpdateMealPlan = async (id: string, updates: Partial<MealPlan>) => {
     if (!user) return;
-    const docRef = doc(db, 'users', user.uid, 'mealPlans', id);
-    await setDoc(docRef, { ...updates, userId: user.uid, updatedAt: serverTimestamp() }, { merge: true })
-      .catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
+    
+    // Workaround: We update the local array and sync it to the SYSTEM_MEAL_PLANS diary entry
+    setMealPlans((prev) => {
+      const newPlans = [...prev];
+      const existingIdx = newPlans.findIndex(p => p.id === id);
+      if (existingIdx >= 0) {
+        newPlans[existingIdx] = { ...newPlans[existingIdx], ...updates };
+      } else {
+        newPlans.push({ id, meals: '', groceries: '', ...updates } as MealPlan);
+      }
+      
+      const docRef = doc(db, 'users', user.uid, 'diaries', 'SYSTEM_MEAL_PLANS');
+      setDoc(docRef, { 
+        date: '2099-12-31', 
+        title: 'SYSTEM_MEAL_PLANS', 
+        content: JSON.stringify(newPlans), 
+        mood: 'neutral', 
+        userId: user.uid 
+      }, { merge: true })
+        .catch(e => handleFirestoreError(e, OperationType.UPDATE, docRef.path));
+        
+      return newPlans;
+    });
   };
 
   return {
