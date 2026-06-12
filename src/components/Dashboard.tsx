@@ -215,10 +215,13 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
 
   const weekId = getMonday(currentDate);
 
+  const DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
   const getPlanForDay = (day: string) => {
-    const dayId = `${weekId}-${day}`;
-    // Fallback to legacy id (just 'day') if data exists from earlier
-    const existingPlan = mealPlans.find(m => m.id === dayId) || mealPlans.find(m => m.id === day);
+    const dayEn = DAYS_EN[DAYS.indexOf(day)];
+    const dayId = `${weekId}-${dayEn}`;
+    // Fallback to legacy id (Korean) if data exists from earlier
+    const existingPlan = mealPlans.find(m => m.id === dayId) || mealPlans.find(m => m.id === `${weekId}-${day}`) || mealPlans.find(m => m.id === day);
     return existingPlan || { id: dayId, meals: '', groceries: '' };
   };
 
@@ -265,7 +268,8 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
             <tbody>
               {DAYS.map((day) => {
                 const plan = getPlanForDay(day);
-                const dayId = `${weekId}-${day}`;
+                const dayEn = DAYS_EN[DAYS.indexOf(day)];
+                const dayId = `${weekId}-${dayEn}`;
                 
                 return (
                   <tr key={dayId} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors group">
