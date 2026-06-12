@@ -130,26 +130,31 @@ function ChecklistCell({ value, onSave, placeholder }: { value: string; onSave: 
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center mt-1">
           <input
             type="text"
             value={newItemText}
             onChange={e => setNewItemText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem(); } }}
-            className="flex-1 text-[13px] outline-none border-b border-neutral-200 focus:border-orange-500 pb-0.5 bg-transparent placeholder-neutral-400"
+            className="w-full text-[13px] outline-none border-b border-neutral-200 focus:border-orange-500 pb-0.5 bg-transparent placeholder-neutral-400 pr-16"
             placeholder="항목 입력 후 엔터..."
             autoFocus
           />
-          <button onClick={handleAddItem} className="p-1 bg-orange-50 text-orange-600 rounded-md hover:bg-orange-100 transition-colors flex-shrink-0">
-            <Plus className="w-4 h-4" />
+        </div>
+        <div className="absolute bottom-2 right-2 flex items-center gap-1.5 z-10">
+          <button 
+            onMouseDown={(e) => { e.preventDefault(); handleAddItem(); }} 
+            className="p-1.5 bg-orange-100 text-orange-600 rounded-md hover:bg-orange-200 transition-colors flex items-center justify-center shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onMouseDown={(e) => { e.preventDefault(); setIsEditing(false); }}
+            className="p-1.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors flex items-center justify-center"
+          >
+            <Check className="w-3.5 h-3.5" />
           </button>
         </div>
-        <button 
-          onMouseDown={(e) => { e.preventDefault(); setIsEditing(false); }}
-          className="absolute bottom-2 right-2 p-1.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors flex items-center justify-center z-10"
-        >
-          <Check className="w-3.5 h-3.5" />
-        </button>
       </div>
     );
   }
