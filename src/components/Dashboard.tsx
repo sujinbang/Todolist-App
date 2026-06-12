@@ -14,10 +14,6 @@ interface DashboardProps {
 }
 
 const DAYS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
-const COLUMNS = [
-  { key: 'meals', label: '식사' },
-  { key: 'groceries', label: '장보기 목록' }
-];
 
 function EditableCell({ value, onSave, placeholder }: { value: string; onSave: (val: string) => void; placeholder: string }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -42,7 +38,7 @@ function EditableCell({ value, onSave, placeholder }: { value: string; onSave: (
           value={localVal}
           onChange={e => setLocalVal(e.target.value)}
           onBlur={() => handleSave()}
-          className="w-full min-h-[80px] text-[13px] text-neutral-800 bg-white border border-orange-300 rounded-[8px] p-2 pb-8 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none transition-shadow shadow-sm"
+          className="w-full min-h-[48px] text-[13px] text-neutral-800 bg-white border border-orange-300 rounded-[8px] p-2 pb-8 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none transition-shadow shadow-sm"
           placeholder={placeholder}
         />
         <button 
@@ -58,7 +54,7 @@ function EditableCell({ value, onSave, placeholder }: { value: string; onSave: (
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className={`w-full min-h-[80px] text-[13px] p-2 rounded-[8px] border border-transparent hover:border-neutral-200 hover:bg-white cursor-pointer transition-all whitespace-pre-wrap ${localVal ? 'text-neutral-800' : 'text-neutral-400'}`}
+      className={`w-full min-h-[48px] text-[13px] p-2 rounded-[8px] border border-transparent hover:border-neutral-200 hover:bg-white cursor-pointer transition-all whitespace-pre-wrap ${localVal ? 'text-neutral-800' : 'text-neutral-400'}`}
     >
       {localVal || <span className="opacity-0 hover:opacity-100 transition-opacity">클릭하여 {placeholder} 추가...</span>}
     </div>
@@ -264,10 +260,10 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
           <table className="w-full text-left border-collapse table-fixed">
             <thead>
               <tr className="border-b-2 border-neutral-800">
-                <th className="py-2 md:py-3 px-1 md:px-4 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[16%] md:w-[20%] text-center md:text-left">요일</th>
-                {COLUMNS.map(col => (
-                  <th key={col.key} className="py-2 md:py-3 px-1 md:px-4 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[42%] md:w-[40%] text-center md:text-left">{col.label}</th>
-                ))}
+                <th className="py-2 md:py-3 px-1 md:px-2 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[12%] md:w-[10%] text-center md:text-left break-keep">요일</th>
+                <th className="py-2 md:py-3 px-1 md:px-2 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[15%] md:w-[10%] text-center md:text-left break-keep">분류</th>
+                <th className="py-2 md:py-3 px-1 md:px-2 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[35%] md:w-[40%] text-center md:text-left break-keep">식단</th>
+                <th className="py-2 md:py-3 px-1 md:px-2 text-[12px] md:text-[13px] font-bold text-neutral-800 w-[38%] md:w-[40%] text-center md:text-left break-keep">장보기 목록</th>
               </tr>
             </thead>
             <tbody>
@@ -277,38 +273,49 @@ export default function Dashboard({ user, mealPlans = [], handleUpdateMealPlan }
                 const dayId = `${weekId}-${dayEn}`;
                 
                 return (
-                  <tr key={dayId} className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors group">
-                    <td className="py-2 md:py-3 px-1 md:px-4 text-[12px] md:text-[13px] font-medium text-neutral-700 bg-neutral-50/30 group-hover:bg-transparent align-top pt-4 text-center md:text-left">
-                      {/* Show full day name on desktop, short on mobile (e.g. '월') */}
-                      <span className="hidden md:inline">{day}</span>
-                      <span className="md:hidden">{day[0]}</span>
-                    </td>
-                    {COLUMNS.map(col => (
-                      <td key={col.key} className="py-2 md:py-3 px-1 md:px-4 align-top">
-                        {col.key === 'meals' ? (
-                          <EditableCell
-                            value={plan.meals}
-                            onSave={(val) => {
-                              if (handleUpdateMealPlan) {
-                                handleUpdateMealPlan(dayId, { [col.key]: val });
-                              }
-                            }}
-                            placeholder={col.label}
-                          />
-                        ) : (
-                          <ChecklistCell
-                            value={plan.groceries}
-                            onSave={(val) => {
-                              if (handleUpdateMealPlan) {
-                                handleUpdateMealPlan(dayId, { [col.key]: val });
-                              }
-                            }}
-                            placeholder={col.label}
-                          />
-                        )}
+                  <React.Fragment key={dayId}>
+                    <tr className="border-b border-neutral-100/50 hover:bg-neutral-50/30 transition-colors group">
+                      <td rowSpan={3} className="border-b border-neutral-200 py-2 md:py-3 px-1 md:px-2 text-[12px] md:text-[13px] font-medium text-neutral-700 bg-neutral-50/50 align-top pt-4 text-center md:text-left border-r border-neutral-100 md:border-transparent">
+                        <span className="hidden md:inline">{day}</span>
+                        <span className="md:hidden">{day[0]}</span>
                       </td>
-                    ))}
-                  </tr>
+                      <td className="py-2 md:py-3 px-1 md:px-2 align-top text-center text-neutral-500 font-medium text-[12px] md:text-[13px] pt-4">아침</td>
+                      <td className="py-2 md:py-3 px-0.5 md:px-2 align-top">
+                        <EditableCell
+                          value={plan.breakfast || ''}
+                          onSave={(val) => { if (handleUpdateMealPlan) handleUpdateMealPlan(dayId, { breakfast: val }); }}
+                          placeholder="아침 식단"
+                        />
+                      </td>
+                      <td rowSpan={3} className="border-b border-neutral-200 py-2 md:py-3 px-0.5 md:px-2 align-top border-l border-neutral-100 md:border-transparent">
+                        <ChecklistCell
+                          value={plan.groceries}
+                          onSave={(val) => { if (handleUpdateMealPlan) handleUpdateMealPlan(dayId, { groceries: val }); }}
+                          placeholder="장보기 목록"
+                        />
+                      </td>
+                    </tr>
+                    <tr className="border-b border-neutral-100/50 hover:bg-neutral-50/30 transition-colors group">
+                      <td className="py-2 md:py-3 px-1 md:px-2 align-top text-center text-neutral-500 font-medium text-[12px] md:text-[13px] pt-4">점심</td>
+                      <td className="py-2 md:py-3 px-0.5 md:px-2 align-top">
+                        <EditableCell
+                          value={plan.lunch || ''}
+                          onSave={(val) => { if (handleUpdateMealPlan) handleUpdateMealPlan(dayId, { lunch: val }); }}
+                          placeholder="점심 식단"
+                        />
+                      </td>
+                    </tr>
+                    <tr className="border-b border-neutral-200 hover:bg-neutral-50/30 transition-colors group">
+                      <td className="py-2 md:py-3 px-1 md:px-2 align-top text-center text-neutral-500 font-medium text-[12px] md:text-[13px] pt-4">저녁</td>
+                      <td className="py-2 md:py-3 px-0.5 md:px-2 align-top">
+                        <EditableCell
+                          value={plan.dinner || ''}
+                          onSave={(val) => { if (handleUpdateMealPlan) handleUpdateMealPlan(dayId, { dinner: val }); }}
+                          placeholder="저녁 식단"
+                        />
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>

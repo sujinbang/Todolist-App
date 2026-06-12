@@ -50,6 +50,9 @@ export interface DiaryEntry {
 
 export interface MealPlan {
   id: string; // The day (e.g. '월요일', '화요일')
-  meals: string;
+  meals?: string;
+  breakfast?: string;
+  lunch?: string;
+  dinner?: string;
   groceries: string;
 }
